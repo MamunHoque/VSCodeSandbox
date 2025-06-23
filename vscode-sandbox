@@ -73,11 +73,12 @@ show_usage() {
     echo -e "    ${CYAN}list${NC}            - List all isolated profiles"
     echo -e "    ${CYAN}clean${NC}           - Remove all profiles and projects"
     echo -e "    ${CYAN}fix-namespaces${NC}  - Fix namespace permission issues"
+    echo -e "    ${CYAN}uninstall${NC}       - Completely remove VS Code Sandbox from system"
     echo -e "    ${CYAN}--help, -h${NC}      - Show this help message"
     echo -e "    ${CYAN}--version, -v${NC}   - Show version information"
     echo -e "    ${CYAN}--update${NC}        - Update to the latest version"
     echo -e "    ${CYAN}--install${NC}       - Install globally to /usr/local/bin"
-    echo -e "    ${CYAN}--uninstall${NC}     - Remove global installation"
+    echo -e "    ${CYAN}--uninstall${NC}     - Remove global installation (legacy)"
     echo
     echo -e "${WHITE}SCAFFOLD OPTIONS:${NC}"
     echo -e "    ${CYAN}--type <type>${NC}   - Project type (react, node, python, go, static)"
@@ -123,6 +124,9 @@ show_usage() {
     echo
     echo -e "    # Remove all profiles and projects"
     echo -e "    $SCRIPT_NAME clean"
+    echo
+    echo -e "    # Completely uninstall VS Code Sandbox"
+    echo -e "    $SCRIPT_NAME uninstall"
     echo
     echo -e "${WHITE}ENVIRONMENT VARIABLES:${NC}"
     echo -e "    ${CYAN}VSCODE_ISOLATION_ROOT${NC}  - Root directory for profiles (default: ~/.vscode-isolated)"
@@ -1709,6 +1713,190 @@ fix_namespace_profiles() {
     done
 }
 
+# Completely uninstall VS Code Sandbox from the system
+uninstall_vscode_sandbox() {
+    log_header "Uninstalling VS Code Sandbox"
+
+    # Check if running as root/sudo for system-wide removal
+    local need_sudo=false
+    if [[ -f "/usr/local/bin/vscode-sandbox" ]] && [[ ! -w "/usr/local/bin" ]]; then
+        need_sudo=true
+    fi
+
+    # Show what will be removed
+    echo -e "${YELLOW}⚠️  WARNING: This will completely remove VS Code Sandbox from your system:${NC}"
+    echo
+
+    # Check what exists and show removal plan
+    local items_to_remove=()
+    local profile_count=0
+
+    # Check for global installation
+    if [[ -f "/usr/local/bin/vscode-sandbox" ]]; then
+        items_to_remove+=("Global installation: /usr/local/bin/vscode-sandbox")
+    fi
+
+    # Check for profiles and data
+    if [[ -d "$ISOLATION_ROOT" ]]; then
+        if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+            profile_count=$(find "$ISOLATION_ROOT/profiles" -maxdepth 1 -type d 2>/dev/null | wc -l)
+            ((profile_count--)) # Subtract 1 for the profiles directory itself
+        fi
+        items_to_remove+=("All profiles and data: $ISOLATION_ROOT ($profile_count profiles)")
+    fi
+
+    # Check for desktop integration files
+    local desktop_files=()
+    if [[ -d "$HOME/.local/share/applications" ]]; then
+        while IFS= read -r -d '' file; do
+            if [[ -f "$file" ]] && grep -q "vscode-sandbox\|VS Code Sandbox" "$file" 2>/dev/null; then
+                desktop_files+=("$(basename "$file")")
+            fi
+        done < <(find "$HOME/.local/share/applications" -name "*.desktop" -print0 2>/dev/null)
+    fi
+
+    if [[ ${#desktop_files[@]} -gt 0 ]]; then
+        items_to_remove+=("Desktop integration files: ${desktop_files[*]}")
+    fi
+
+    # Check for MIME type associations
+    local mime_files=()
+    if [[ -d "$HOME/.local/share/mime/packages" ]]; then
+        while IFS= read -r -d '' file; do
+            if [[ -f "$file" ]] && grep -q "vscode-sandbox\|VS Code Sandbox" "$file" 2>/dev/null; then
+                mime_files+=("$(basename "$file")")
+            fi
+        done < <(find "$HOME/.local/share/mime/packages" -name "*.xml" -print0 2>/dev/null)
+    fi
+
+    if [[ ${#mime_files[@]} -gt 0 ]]; then
+        items_to_remove+=("MIME type associations: ${mime_files[*]}")
+    fi
+
+    # Show removal plan
+    if [[ ${#items_to_remove[@]} -eq 0 ]]; then
+        log_info "VS Code Sandbox is not installed or no components found to remove"
+        return 0
+    fi
+
+    echo -e "${RED}Items to be removed:${NC}"
+    for item in "${items_to_remove[@]}"; do
+        echo -e "   • ${RED}$item${NC}"
+    done
+    echo
+
+    # Show sudo requirement if needed
+    if [[ "$need_sudo" == true ]]; then
+        echo -e "${YELLOW}Note: Sudo privileges required for global installation removal${NC}"
+        echo
+    fi
+
+    # Confirmation prompt
+    echo -e "${YELLOW}This action cannot be undone!${NC}"
+    read -p "Are you sure you want to completely uninstall VS Code Sandbox? (type 'UNINSTALL' to confirm): " -r
+    echo
+
+    if [[ "$REPLY" != "UNINSTALL" ]]; then
+        log_info "Uninstallation cancelled"
+        return 0
+    fi
+
+    # Perform uninstallation
+    local removed_items=()
+    local failed_items=()
+
+    # Remove global installation
+    if [[ -f "/usr/local/bin/vscode-sandbox" ]]; then
+        log_step "Removing global installation..."
+        if [[ "$need_sudo" == true ]]; then
+            if sudo rm -f "/usr/local/bin/vscode-sandbox" 2>/dev/null; then
+                removed_items+=("Global installation")
+            else
+                failed_items+=("Global installation (permission denied)")
+            fi
+        else
+            if rm -f "/usr/local/bin/vscode-sandbox" 2>/dev/null; then
+                removed_items+=("Global installation")
+            else
+                failed_items+=("Global installation")
+            fi
+        fi
+    fi
+
+    # Remove all profiles and data
+    if [[ -d "$ISOLATION_ROOT" ]]; then
+        log_step "Removing all profiles and data..."
+        if rm -rf "$ISOLATION_ROOT" 2>/dev/null; then
+            removed_items+=("All profiles and data ($profile_count profiles)")
+        else
+            failed_items+=("Profiles and data")
+        fi
+    fi
+
+    # Remove desktop integration files
+    if [[ ${#desktop_files[@]} -gt 0 ]]; then
+        log_step "Removing desktop integration files..."
+        local desktop_removed=()
+        for file in "${desktop_files[@]}"; do
+            if rm -f "$HOME/.local/share/applications/$file" 2>/dev/null; then
+                desktop_removed+=("$file")
+            fi
+        done
+        if [[ ${#desktop_removed[@]} -gt 0 ]]; then
+            removed_items+=("Desktop files: ${desktop_removed[*]}")
+        fi
+    fi
+
+    # Remove MIME type associations
+    if [[ ${#mime_files[@]} -gt 0 ]]; then
+        log_step "Removing MIME type associations..."
+        local mime_removed=()
+        for file in "${mime_files[@]}"; do
+            if rm -f "$HOME/.local/share/mime/packages/$file" 2>/dev/null; then
+                mime_removed+=("$file")
+            fi
+        done
+        if [[ ${#mime_removed[@]} -gt 0 ]]; then
+            removed_items+=("MIME files: ${mime_removed[*]}")
+            # Update MIME database
+            if command_exists "update-mime-database"; then
+                update-mime-database "$HOME/.local/share/mime" 2>/dev/null || true
+            fi
+        fi
+    fi
+
+    # Update desktop database
+    if command_exists "update-desktop-database"; then
+        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    fi
+
+    # Show results
+    echo
+    if [[ ${#removed_items[@]} -gt 0 ]]; then
+        log_success "VS Code Sandbox uninstallation completed"
+        echo
+        echo -e "${GREEN}✅ Successfully removed:${NC}"
+        for item in "${removed_items[@]}"; do
+            echo -e "   • ${GREEN}$item${NC}"
+        done
+    fi
+
+    if [[ ${#failed_items[@]} -gt 0 ]]; then
+        echo
+        echo -e "${RED}❌ Failed to remove:${NC}"
+        for item in "${failed_items[@]}"; do
+            echo -e "   • ${RED}$item${NC}"
+        done
+        echo
+        echo -e "${YELLOW}You may need to remove these manually with appropriate permissions${NC}"
+    fi
+
+    echo
+    echo -e "${CYAN}💡 VS Code Sandbox has been removed from your system${NC}"
+    echo -e "${CYAN}💡 You can reinstall anytime with:${NC}"
+    echo -e "   curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/install-vscode-sandbox.sh | sudo bash"
+}
+
 # Show profile status
 show_profile_status() {
     if [[ ! -d "$PROFILE_ROOT" ]]; then
@@ -2271,7 +2459,7 @@ main() {
             install_globally
             exit 0
             ;;
-        "--uninstall"|"uninstall")
+        "--uninstall")
             uninstall_globally
             exit 0
             ;;
@@ -2285,6 +2473,10 @@ main() {
             ;;
         "fix-namespaces")
             fix_namespace_profiles
+            exit 0
+            ;;
+        "uninstall")
+            uninstall_vscode_sandbox
             exit 0
             ;;
         "")

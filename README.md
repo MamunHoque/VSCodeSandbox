@@ -243,6 +243,7 @@ vscode-sandbox <profile> scaffold <project> --type <type> # Create project
 vscode-sandbox list                                 # List all profiles
 vscode-sandbox clean                                # Remove ALL profiles
 vscode-sandbox fix-namespaces                      # Fix permission issues
+vscode-sandbox uninstall                           # Completely remove from system
 
 # Tool management
 vscode-sandbox --version                           # Show version
@@ -359,6 +360,9 @@ vscode-sandbox clean
 
 # Fix namespace permission issues for existing profiles
 vscode-sandbox fix-namespaces
+
+# Completely uninstall VS Code Sandbox from system
+vscode-sandbox uninstall
 ```
 
 ## 🚨 **Troubleshooting**
@@ -422,6 +426,19 @@ vscode-sandbox clean
 
 # Confirm with 'yes' when prompted
 # This removes ALL profiles, projects, and settings
+
+#### **Complete System Uninstall**
+```bash
+# Remove VS Code Sandbox completely from system
+vscode-sandbox uninstall
+
+# Confirm with 'UNINSTALL' when prompted
+# This removes:
+# - Global installation (/usr/local/bin/vscode-sandbox)
+# - All profiles and data
+# - Desktop integration files
+# - MIME type associations
+```
 ```
 
 #### **Permission Denied Errors**
