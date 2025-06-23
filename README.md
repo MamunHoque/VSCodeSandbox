@@ -13,6 +13,10 @@ VS Code Sandbox creates completely isolated VS Code environments that simulate f
 - 🔒 **Complete Isolation**: Zero interference between profiles or host system
 - 🖥️ **Desktop Integration**: Custom launchers and MIME types for maximum security
 - 🧪 **Well Tested**: Comprehensive test suite ensures isolation effectiveness
+- 🧹 **Bulk Management**: Clean all profiles, fix namespace issues with single commands
+- 📱 **Snap Compatibility**: Works with snap VS Code (with options for complete isolation)
+- 🔧 **Auto-Repair**: Fix namespace permission issues automatically
+- 🚀 **Force Options**: Override snap restrictions for complete isolation when needed
 
 ## 🚀 **Quick Installation**
 
@@ -104,6 +108,49 @@ Every isolated VS Code profile automatically includes:
 vscode-sandbox manual-setup create --no-extensions
 ```
 
+## 🛡️ **Maximum Security & Snap VS Code Compatibility**
+
+### **Snap VS Code Limitations**
+VS Code Sandbox automatically detects snap-based VS Code installations and uses basic isolation due to snap package restrictions with user namespaces.
+
+### **Force Complete Isolation**
+```bash
+# Override snap restrictions (advanced users)
+vscode-sandbox myproject create --max-security --force-namespaces
+vscode-sandbox myproject launch --force-namespaces
+```
+
+### **Recommended: Install Non-Snap VS Code**
+For complete isolation without issues, install VS Code via official repository:
+
+```bash
+# Remove snap VS Code
+sudo snap remove code
+
+# Install official VS Code
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+sudo apt update && sudo apt install code
+
+# Now enjoy complete isolation
+vscode-sandbox myproject create --max-security
+```
+
+### **Isolation Levels**
+
+#### **Basic Isolation (Snap VS Code)**
+- ✅ Separate HOME directory and settings
+- ✅ Separate extensions and projects
+- ✅ Environment variable isolation
+- ❌ Process and mount namespace isolation
+
+#### **Complete Isolation (Non-Snap VS Code)**
+- ✅ All basic isolation features
+- ✅ Process isolation (separate PID namespace)
+- ✅ Mount namespace isolation
+- ✅ Complete system isolation
+
 ## 📦 **Project Scaffolding**
 
 Create projects within isolated VS Code profiles:
@@ -169,6 +216,74 @@ sudo apt update && sudo apt install util-linux git curl
 sudo dnf install util-linux git curl
 ```
 
+## 📖 **Complete Command Reference**
+
+### **Profile Commands**
+```bash
+# Create profiles
+vscode-sandbox <profile> create                    # Basic isolation
+vscode-sandbox <profile> create --max-security     # Maximum security
+vscode-sandbox <profile> create --force-namespaces # Force namespaces (snap)
+vscode-sandbox <profile> create --no-extensions    # Skip auto-extensions
+vscode-sandbox <profile> create --desktop          # Desktop integration
+
+# Launch profiles
+vscode-sandbox <profile> launch                    # Normal launch
+vscode-sandbox <profile> launch --force-namespaces # Force namespaces
+
+# Manage profiles
+vscode-sandbox <profile> status                    # Show profile info
+vscode-sandbox <profile> remove                    # Remove profile
+vscode-sandbox <profile> scaffold <project> --type <type> # Create project
+```
+
+### **Global Commands**
+```bash
+# List and manage
+vscode-sandbox list                                 # List all profiles
+vscode-sandbox clean                                # Remove ALL profiles
+vscode-sandbox fix-namespaces                      # Fix permission issues
+
+# Tool management
+vscode-sandbox --version                           # Show version
+vscode-sandbox --help                              # Show help
+vscode-sandbox --update                            # Update tool
+vscode-sandbox --install                           # Install globally
+vscode-sandbox --uninstall                         # Uninstall
+```
+
+### **Project Scaffolding**
+```bash
+# Create projects within profiles
+vscode-sandbox <profile> scaffold <name> --type react     # React app
+vscode-sandbox <profile> scaffold <name> --type node      # Node.js app
+vscode-sandbox <profile> scaffold <name> --type python    # Python project
+vscode-sandbox <profile> scaffold <name> --type go        # Go application
+vscode-sandbox <profile> scaffold <name> --type static    # Static website
+
+# Scaffolding options
+--git                                              # Initialize Git repo
+--vscode                                           # Add VS Code config
+--docker                                           # Add Docker config
+```
+
+### **Advanced Options**
+```bash
+# Security levels
+--basic                                            # Basic isolation (default)
+--max-security                                     # Maximum security with namespaces
+--force-namespaces                                 # Force namespaces (override snap)
+
+# Integration options
+--desktop                                          # Desktop integration (max-security)
+--no-extensions                                    # Skip automatic extensions
+
+# Environment variables
+VSCODE_BINARY=/path/to/code                        # Custom VS Code binary
+VSCODE_ISOLATION_ROOT=/custom/path                 # Custom isolation directory
+FORCE_NAMESPACES=true                              # Force namespaces globally
+```
+
 ## 📖 **Complete Usage Guide**
 
 ### **Profile Management**
@@ -179,8 +294,14 @@ vscode-sandbox myproject create
 # Create maximum security profile with desktop integration
 vscode-sandbox secure-project create --max-security --desktop
 
+# Create profile with forced namespace isolation (for snap VS Code)
+vscode-sandbox secure-project create --max-security --force-namespaces
+
 # Launch existing profile
 vscode-sandbox myproject launch
+
+# Launch with forced namespace isolation
+vscode-sandbox myproject launch --force-namespaces
 
 # Show detailed profile information
 vscode-sandbox myproject status
@@ -190,6 +311,12 @@ vscode-sandbox list
 
 # Remove profile completely
 vscode-sandbox myproject remove
+
+# Remove ALL profiles and projects
+vscode-sandbox clean
+
+# Fix namespace permission issues
+vscode-sandbox fix-namespaces
 ```
 
 ### **Project Creation Workflow**
@@ -223,6 +350,15 @@ sudo vscode-sandbox --install
 
 # Uninstall global installation
 sudo vscode-sandbox --uninstall
+
+# List all profiles
+vscode-sandbox list
+
+# Remove all profiles and projects (with confirmation)
+vscode-sandbox clean
+
+# Fix namespace permission issues for existing profiles
+vscode-sandbox fix-namespaces
 ```
 
 ## 🚨 **Troubleshooting**
@@ -256,6 +392,36 @@ vscode-sandbox myproject create
 # Solution: Install manually or skip auto-installation
 vscode-sandbox myproject create --no-extensions
 # Then install Augment manually from Extensions marketplace
+```
+
+#### **Namespace Permission Issues**
+```bash
+# Error: "unshare: unshare failed: Operation not permitted"
+# Solution: Use the fix command
+vscode-sandbox fix-namespaces
+
+# Or force namespaces for snap VS Code (advanced)
+vscode-sandbox myproject launch --force-namespaces
+```
+
+#### **Snap VS Code Compatibility**
+```bash
+# Warning: "Snap VS Code detected - using basic isolation"
+# Solution 1: Install non-snap VS Code (recommended)
+sudo snap remove code
+sudo apt install code
+
+# Solution 2: Force namespaces (may have issues)
+vscode-sandbox myproject create --max-security --force-namespaces
+```
+
+#### **Clean All Profiles**
+```bash
+# Remove all profiles and start fresh
+vscode-sandbox clean
+
+# Confirm with 'yes' when prompted
+# This removes ALL profiles, projects, and settings
 ```
 
 #### **Permission Denied Errors**
