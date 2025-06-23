@@ -90,6 +90,7 @@ show_usage() {
     echo -e "    ${CYAN}--basic${NC}         - Use basic isolation (default)"
     echo -e "    ${CYAN}--desktop${NC}       - Add desktop integration (with --max-security)"
     echo -e "    ${CYAN}--no-extensions${NC} - Skip automatic extension installation"
+    echo -e "    ${CYAN}--force-namespaces${NC} - Force namespace isolation even with snap VS Code"
     echo
     echo -e "${WHITE}URI SUPPORT:${NC}"
     echo -e "    ${CYAN}vscode://file/path${NC}              - Open specific file"
@@ -1043,6 +1044,7 @@ PROFILE_ROOT="$PROFILE_ROOT"
 PROFILE_HOME="$PROFILE_HOME"
 PROFILE_TMP="$PROFILE_TMP"
 VSCODE_BINARY="$VSCODE_BINARY"
+FORCE_NAMESPACES="$FORCE_NAMESPACES"
 
 # Parse arguments and handle various URI formats
 ARGS=("\$@")
@@ -1155,9 +1157,10 @@ if [[ ! -d "\$PROFILE_ROOT" ]]; then
 fi
 
 # Check if VS Code is snap-based and handle accordingly
-if [[ "\$VSCODE_BINARY" == *"/snap/"* ]]; then
+if [[ "\$VSCODE_BINARY" == *"/snap/"* ]] && [[ "\${FORCE_NAMESPACES:-}" != "true" ]]; then
     echo "⚠️  Snap VS Code detected - using basic isolation instead of namespaces"
     echo "ℹ️  Snap packages have restrictions with user namespaces"
+    echo "ℹ️  Use --force-namespaces to override (may cause issues)"
 
     # Use basic isolation for snap VS Code
     export HOME="\$PROFILE_HOME"
@@ -1456,6 +1459,12 @@ launch_profile() {
     fi
 
     log_info "Launching isolated VS Code profile: $PROFILE_NAME"
+
+    # Pass FORCE_NAMESPACES environment variable to launcher
+    if [[ "$FORCE_NAMESPACES" == true ]]; then
+        export FORCE_NAMESPACES=true
+    fi
+
     exec "$LAUNCHER_SCRIPT" "$@"
 }
 
@@ -2242,6 +2251,7 @@ main() {
     MAX_SECURITY=false
     ENABLE_DESKTOP=false
     SKIP_EXTENSIONS=false
+    FORCE_NAMESPACES=false
 
     # Handle global commands first
     case "${1:-}" in
@@ -2309,6 +2319,10 @@ main() {
                     SKIP_EXTENSIONS=true
                     shift
                     ;;
+                --force-namespaces)
+                    FORCE_NAMESPACES=true
+                    shift
+                    ;;
                 *)
                     log_error "Unknown option for create command: $1"
                     show_usage
@@ -2341,6 +2355,18 @@ main() {
             ;;
         "launch")
             shift 2 # Remove profile name and command
+            # Parse launch options
+            while [[ $# -gt 0 ]]; do
+                case $1 in
+                    --force-namespaces)
+                        FORCE_NAMESPACES=true
+                        shift
+                        ;;
+                    *)
+                        break
+                        ;;
+                esac
+            done
             launch_profile "$@"
             ;;
         "remove")
