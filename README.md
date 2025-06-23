@@ -24,7 +24,10 @@ cd VSCodeSandbox
 # Make scripts executable
 chmod +x *.sh
 
-# Create your first isolated VS Code profile
+# Create and launch your first isolated VS Code profile (Recommended)
+./vscode-working-launcher.sh myproject
+
+# Alternative: Use the advanced isolation engine
 ./vscode-isolate.sh myproject create
 
 # List all profiles
@@ -32,6 +35,14 @@ chmod +x *.sh
 
 # Launch profile management interface
 ./vscode-profile-manager.sh launch
+```
+
+### 🎯 Recommended Workflow
+```bash
+# For most users - simple and reliable:
+./vscode-working-launcher.sh client-work    # Auto-creates and launches
+./vscode-working-launcher.sh personal-dev   # Another isolated environment
+./vscode-working-launcher.sh experimental   # Safe testing environment
 ```
 
 ## 🎯 Use Cases
@@ -59,10 +70,25 @@ chmod +x *.sh
 
 ## 🛠️ Scripts Overview
 
-- **`vscode-isolate.sh`** - Main isolation engine
-- **`vscode-profile-manager.sh`** - Advanced profile management
+### `vscode-working-launcher.sh` - Recommended Launcher ⭐
+**Simple, reliable launcher that works with any VS Code installation**
+
+```bash
+./vscode-working-launcher.sh <profile_name>
+```
+
+**Features:**
+- ✅ Auto-creates profiles if they don't exist
+- ✅ Works with snap, deb, AppImage VS Code
+- ✅ No permission issues
+- ✅ Launches VS Code automatically
+- ✅ Perfect isolation using VS Code's built-in features
+
+### Other Scripts
+- **`vscode-isolate.sh`** - Advanced isolation engine with namespace support
+- **`vscode-profile-manager.sh`** - Advanced profile management utilities
 - **`vscode-isolation-test.sh`** - Comprehensive test suite
-- **`install.sh`** - Easy installation script
+- **`install.sh`** - Professional installation script
 
 ## 📋 Requirements
 
@@ -103,16 +129,28 @@ Run the comprehensive test suite:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 📝 What's New
+
+### Version 2.0.0 - Major Release
+- ✅ **New recommended launcher** - `vscode-working-launcher.sh`
+- ✅ **Complete rewrite** with enhanced isolation
+- ✅ **Multiple launcher options** for different needs
+- ✅ **Professional documentation** and troubleshooting
+- ✅ **Comprehensive test suite** for reliability
+- ✅ **One-command installation** with automatic setup
+
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
+
 ## 🔗 Links
 
 - **Repository**: [https://github.com/MamunHoque/VSCodeSandbox](https://github.com/MamunHoque/VSCodeSandbox)
-- [Detailed Documentation](README.md)
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+- [Changelog](CHANGELOG.md) - What's new and version history
+- [Detailed Documentation](README-Enhanced-Isolation.md) - Technical details
+- [Architecture Overview](docs/ARCHITECTURE.md) - How it works
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Common issues
 
 ---
 
 **VS Code Sandbox** - Because every project deserves its own universe. 🌌
 
 *Created with ❤️ by [Mamun Hoque](https://github.com/MamunHoque)*
-# VSCodeSandbox

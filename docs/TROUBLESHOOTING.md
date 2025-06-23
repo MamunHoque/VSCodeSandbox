@@ -8,8 +8,16 @@ This guide helps you resolve common issues with VS Code Sandbox.
 
 **Error:** `unshare: Operation not permitted`
 
-**Causes & Solutions:**
+**Quick Fix:** Use the recommended launcher instead:
+```bash
+# Instead of the namespace-based launcher:
+./vscode-isolate.sh myproject create
 
+# Use the working launcher (no namespace issues):
+./vscode-working-launcher.sh myproject
+```
+
+**Permanent Solution:**
 ```bash
 # Check if user namespaces are enabled
 cat /proc/sys/kernel/unprivileged_userns_clone
@@ -88,8 +96,15 @@ update-mime-database ~/.local/share/mime
 
 **Error:** Profile launches but VS Code doesn't start
 
-**Solutions:**
+**Quick Fix:** Use the working launcher:
+```bash
+# Try the reliable launcher first:
+./vscode-working-launcher.sh myproject
 
+# If that works, the issue is with namespace isolation
+```
+
+**Advanced Debugging:**
 ```bash
 # Check profile status
 ./vscode-isolate.sh myproject status
@@ -194,6 +209,30 @@ ls -la ~/.vscode-isolated/profiles/myproject/home/.local/share/Code/extensions/
 
 # Reset extensions
 rm -rf ~/.vscode-isolated/profiles/myproject/home/.local/share/Code/extensions/
+```
+
+## 🚀 Choosing the Right Launcher
+
+### Launcher Comparison
+
+| Launcher | Best For | Isolation Level | Compatibility |
+|----------|----------|-----------------|---------------|
+| `vscode-working-launcher.sh` ⭐ | Most users | Excellent | All VS Code installations |
+| `vscode-isolate.sh` | Advanced users | Maximum | Requires namespace support |
+| `vscode-smart-launcher.sh` | Auto-detection | Variable | Adapts to system |
+| `vscode-quick-launcher.sh` | Namespace-aware | High | Namespace systems |
+
+### Recommended Usage
+
+```bash
+# Start here (works everywhere):
+./vscode-working-launcher.sh myproject
+
+# If you need maximum isolation and have namespace support:
+./vscode-isolate.sh myproject create
+
+# For automatic detection of best method:
+./vscode-smart-launcher.sh myproject
 ```
 
 ## 🔍 Log Analysis

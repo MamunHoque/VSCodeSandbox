@@ -111,13 +111,17 @@ install_files() {
     if [[ -f "vscode-isolate.sh" ]]; then
         log_info "Installing from local source..."
         cp vscode-isolate.sh vscode-profile-manager.sh vscode-isolation-test.sh "$INSTALL_DIR/"
+        cp vscode-working-launcher.sh "$INSTALL_DIR/" 2>/dev/null || true
+        cp vscode-smart-launcher.sh "$INSTALL_DIR/" 2>/dev/null || true
+        cp vscode-quick-launcher.sh "$INSTALL_DIR/" 2>/dev/null || true
         [[ -f "README-Enhanced-Isolation.md" ]] && cp README-Enhanced-Isolation.md "$INSTALL_DIR/"
+        [[ -f "CHANGELOG.md" ]] && cp CHANGELOG.md "$INSTALL_DIR/"
     else
         log_info "Downloading from repository..."
         # Download files from GitHub
         local base_url="https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main"
-        local files=("vscode-isolate.sh" "vscode-profile-manager.sh" "vscode-isolation-test.sh")
-        
+        local files=("vscode-isolate.sh" "vscode-profile-manager.sh" "vscode-isolation-test.sh" "vscode-working-launcher.sh")
+
         for file in "${files[@]}"; do
             if command -v curl >/dev/null 2>&1; then
                 curl -sSL "$base_url/$file" -o "$INSTALL_DIR/$file"
@@ -147,11 +151,13 @@ create_symlinks() {
     ln -sf "$INSTALL_DIR/vscode-isolate.sh" "$BIN_DIR/vscode-sandbox"
     ln -sf "$INSTALL_DIR/vscode-profile-manager.sh" "$BIN_DIR/vscode-sandbox-manager"
     ln -sf "$INSTALL_DIR/vscode-isolation-test.sh" "$BIN_DIR/vscode-sandbox-test"
-    
+    ln -sf "$INSTALL_DIR/vscode-working-launcher.sh" "$BIN_DIR/vscode-sandbox-launch" 2>/dev/null || true
+
     log_success "Created command shortcuts:"
     echo -e "  ${BLUE}vscode-sandbox${NC}         - Main isolation script"
     echo -e "  ${BLUE}vscode-sandbox-manager${NC} - Profile management"
     echo -e "  ${BLUE}vscode-sandbox-test${NC}    - Test isolation"
+    echo -e "  ${BLUE}vscode-sandbox-launch${NC}  - Quick launcher (recommended)"
 }
 
 # Setup shell integration
@@ -197,7 +203,8 @@ show_completion() {
     echo -e "${GREEN}✅ Installation successful!${NC}"
     echo
     echo -e "${BLUE}📋 Quick Start:${NC}"
-    echo -e "  ${CYAN}vscode-sandbox myproject create${NC}     # Create isolated profile"
+    echo -e "  ${CYAN}vscode-sandbox-launch myproject${NC}     # Quick launcher (recommended)"
+    echo -e "  ${CYAN}vscode-sandbox myproject create${NC}     # Advanced isolation"
     echo -e "  ${CYAN}vscode-sandbox \"\" list${NC}              # List all profiles"
     echo -e "  ${CYAN}vscode-sandbox-manager launch${NC}       # Interactive launcher"
     echo -e "  ${CYAN}vscode-sandbox-test${NC}                 # Test isolation"

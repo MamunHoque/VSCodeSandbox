@@ -49,7 +49,30 @@ This enhanced isolation solution creates completely sandboxed VS Code environmen
 
 ## 🛠️ Scripts Overview
 
-### 1. `vscode-isolate.sh` - Main Isolation Script
+### 1. `vscode-working-launcher.sh` - Recommended Launcher ⭐
+**Simple, reliable launcher that works with any VS Code installation**
+
+**Usage:**
+```bash
+./vscode-working-launcher.sh <profile_name>
+```
+
+**Features:**
+- ✅ Auto-creates profiles if they don't exist
+- ✅ Works with snap, deb, AppImage VS Code installations
+- ✅ No permission or namespace issues
+- ✅ Launches VS Code automatically
+- ✅ Perfect isolation using VS Code's built-in features
+- ✅ Snap-compatible (no HOME directory changes)
+
+**Examples:**
+```bash
+./vscode-working-launcher.sh myproject      # Auto-create and launch
+./vscode-working-launcher.sh client-work    # Launch client profile
+./vscode-working-launcher.sh experimental   # Launch experimental profile
+```
+
+### 2. `vscode-isolate.sh` - Advanced Isolation Engine
 Enhanced version with comprehensive isolation using Linux namespaces.
 
 **Usage:**
@@ -58,7 +81,7 @@ Enhanced version with comprehensive isolation using Linux namespaces.
 
 Commands:
   create    Create and launch isolated profile (default)
-  launch    Launch existing profile  
+  launch    Launch existing profile
   remove    Remove profile completely
   list      List all profiles
   status    Show profile status
@@ -72,7 +95,7 @@ Commands:
 ./vscode-isolate.sh "" list                 # List all profiles
 ```
 
-### 2. `vscode-profile-manager.sh` - Advanced Management
+### 3. `vscode-profile-manager.sh` - Advanced Management
 Provides advanced utilities for profile management.
 
 **Usage:**
@@ -87,13 +110,21 @@ Commands:
   clone [src] [dst]   Clone a profile
 ```
 
-### 3. `vscode-isolation-test.sh` - Test Suite
+### 4. `vscode-isolation-test.sh` - Test Suite
 Comprehensive test suite to verify isolation effectiveness.
 
 **Usage:**
 ```bash
 ./vscode-isolation-test.sh
 ```
+
+### 5. Additional Launchers
+
+#### `vscode-smart-launcher.sh` - Auto-Detecting Launcher
+Automatically detects the best isolation method available on your system.
+
+#### `vscode-quick-launcher.sh` - Namespace-Aware Launcher
+Uses namespace isolation when available, with fallback options.
 
 ## 🔒 Isolation Features
 
