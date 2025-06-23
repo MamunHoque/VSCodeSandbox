@@ -1,0 +1,88 @@
+# VS Code Sandbox - Git Ignore File
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Test artifacts
+test-results/
+coverage/
+.nyc_output/
+
+# IDE files (ironically, since this is for VS Code isolation)
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Runtime files
+*.pid
+*.sock
+
+# Local configuration overrides
+local-config.sh
+.env.local
+
+# Documentation build artifacts
+docs/_build/
+docs/site/
+
+# Package manager files (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python artifacts (if any)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Local test profiles (don't commit test isolation directories)
+test-profiles/
+.vscode-isolated-test/
+
+# User-specific installation directories
+.local-install/
