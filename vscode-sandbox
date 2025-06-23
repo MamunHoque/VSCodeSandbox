@@ -68,6 +68,7 @@ show_usage() {
     echo -e "    ${CYAN}remove${NC}          - Remove profile completely"
     echo -e "    ${CYAN}status${NC}          - Show profile status and information"
     echo -e "    ${CYAN}scaffold${NC}        - Create project template within profile"
+    echo -e "    ${CYAN}uri-status${NC}      - Show vscode:// URI handler status for profile"
     echo
     echo -e "${WHITE}GLOBAL COMMANDS:${NC}"
     echo -e "    ${CYAN}list${NC}            - List all isolated profiles"
@@ -96,6 +97,8 @@ show_usage() {
     echo -e "${WHITE}URI SUPPORT:${NC}"
     echo -e "    ${CYAN}vscode://file/path${NC}              - Open specific file"
     echo -e "    ${CYAN}vscode://folder/path${NC}            - Open specific folder"
+    echo -e "    ${CYAN}vscode://extension/id${NC}           - Install/open extension"
+    echo -e "    ${CYAN}vscode://augment.vscode-augment/...${NC} - Augment extension URIs (auth, etc.)"
     echo -e "    ${CYAN}vscode-<profile>://file/path${NC}    - Profile-specific file URI"
     echo -e "    ${CYAN}file:///path/to/file${NC}            - Local file URI"
     echo -e "    ${CYAN}--open-url=vscode://...${NC}         - Explicit URI parameter"
@@ -1240,6 +1243,53 @@ EOF
     log_success "Maximum security launcher script created with comprehensive URI support"
 }
 
+# Register URI handlers for the profile
+register_uri_handlers() {
+    log_step "Registering vscode:// URI handlers for profile '$PROFILE_NAME'"
+
+    # Create a simple desktop entry for URI handling (even for basic profiles)
+    local desktop_dir="$HOME/.local/share/applications"
+    mkdir -p "$desktop_dir"
+    local simple_desktop_entry="$desktop_dir/vscode-$PROFILE_NAME.desktop"
+
+    cat > "$simple_desktop_entry" << EOF
+[Desktop Entry]
+Name=VS Code - $PROFILE_NAME
+Comment=Isolated VS Code environment for $PROFILE_NAME
+Exec=$LAUNCHER_SCRIPT %u
+Icon=code
+Terminal=false
+Type=Application
+Categories=Development;IDE;
+MimeType=x-scheme-handler/vscode;x-scheme-handler/vscode-$PROFILE_NAME;x-scheme-handler/vscode-file;
+StartupNotify=true
+StartupWMClass=code
+NoDisplay=true
+EOF
+
+    # Update desktop database first
+    if command_exists "update-desktop-database"; then
+        update-desktop-database "$desktop_dir" 2>/dev/null || true
+    fi
+
+    # Register this profile to handle vscode:// URIs
+    if command_exists "xdg-mime"; then
+        # Try to register the handlers
+        if xdg-mime default "vscode-$PROFILE_NAME.desktop" "x-scheme-handler/vscode" 2>/dev/null; then
+            log_success "Registered profile '$PROFILE_NAME' to handle vscode:// URIs"
+        else
+            log_warning "Could not register vscode:// handler automatically"
+            log_info "You may need to run manually: xdg-mime default vscode-$PROFILE_NAME.desktop x-scheme-handler/vscode"
+        fi
+
+        # Register profile-specific handler
+        xdg-mime default "vscode-$PROFILE_NAME.desktop" "x-scheme-handler/vscode-$PROFILE_NAME" 2>/dev/null || true
+    else
+        log_warning "xdg-mime not available - URI handlers not registered"
+        log_info "Install xdg-utils package to enable automatic URI registration"
+    fi
+}
+
 # Create desktop integration for maximum security
 create_desktop_integration() {
     if [[ "$MAX_SECURITY" != true ]] || [[ "$ENABLE_DESKTOP" != true ]]; then
@@ -1342,13 +1392,7 @@ EOF
         update-desktop-database "$PROFILE_LOCAL/share/applications" 2>/dev/null || true
     fi
 
-    # Register as default handler for this profile's URIs
-    if command_exists "xdg-mime"; then
-        xdg-mime default "vscode-$PROFILE_NAME.desktop" "x-scheme-handler/vscode-$PROFILE_NAME" 2>/dev/null || true
-        # Optionally register for standard vscode:// URIs (user choice)
-        log_info "To make this profile handle all vscode:// URIs, run:"
-        log_info "xdg-mime default vscode-$PROFILE_NAME.desktop x-scheme-handler/vscode"
-    fi
+    # Note: URI registration is handled by register_uri_handlers() function
 
     log_success "Desktop integration created with comprehensive URI support"
 }
@@ -1383,6 +1427,7 @@ create_profile() {
     fi
 
     create_launcher_script
+    register_uri_handlers
     create_desktop_integration
 
     # Create optimized settings for Augment
@@ -1984,6 +2029,110 @@ show_profile_status() {
     fi
 }
 
+# Show URI handler status for profile
+show_uri_status() {
+    if [[ ! -d "$PROFILE_ROOT" ]]; then
+        log_error "Profile '$PROFILE_NAME' does not exist"
+        log_info "Create it first with: vscode-sandbox $PROFILE_NAME create"
+        exit 1
+    fi
+
+    echo -e "${BLUE}🔗 URI Handler Status: ${WHITE}$PROFILE_NAME${NC}"
+    echo
+
+    # Check if xdg-mime is available
+    if ! command_exists "xdg-mime"; then
+        log_warning "xdg-mime not available - cannot check URI handler status"
+        return
+    fi
+
+    # Check current vscode:// handler
+    local current_handler=$(xdg-mime query default x-scheme-handler/vscode 2>/dev/null || echo "none")
+    local expected_handler="vscode-$PROFILE_NAME.desktop"
+
+    # Check if it's registered in user's mimeapps.list
+    local user_registered=false
+    if [[ -f ~/.config/mimeapps.list ]] && grep -q "x-scheme-handler/vscode=$expected_handler" ~/.config/mimeapps.list 2>/dev/null; then
+        user_registered=true
+    fi
+
+    echo -e "${GREEN}🎯 vscode:// URI Handler:${NC}"
+    if [[ "$current_handler" == "$expected_handler" ]]; then
+        echo -e "   ${GREEN}✅ Correctly configured${NC}"
+        echo -e "   ${BLUE}Handler:${NC} $current_handler"
+        echo -e "   ${BLUE}Profile:${NC} $PROFILE_NAME"
+    elif [[ "$user_registered" == true ]]; then
+        echo -e "   ${YELLOW}⚠️ Registered but overridden by system${NC}"
+        echo -e "   ${BLUE}System Handler:${NC} $current_handler"
+        echo -e "   ${BLUE}Your Handler:${NC} $expected_handler (registered in ~/.config/mimeapps.list)"
+        if [[ "$current_handler" == *"snap"* ]] || [[ "$current_handler" == *"code_code"* ]]; then
+            echo -e "   ${CYAN}Note:${NC} Snap VS Code may override user URI handlers"
+            echo -e "   ${CYAN}Workaround:${NC} Use profile-specific URIs (vscode-$PROFILE_NAME://)"
+        fi
+    elif [[ "$current_handler" == "none" ]]; then
+        echo -e "   ${YELLOW}⚠️ No handler configured${NC}"
+        echo -e "   ${CYAN}Fix with:${NC} xdg-mime default $expected_handler x-scheme-handler/vscode"
+    else
+        echo -e "   ${RED}❌ Different handler configured${NC}"
+        echo -e "   ${BLUE}Current:${NC} $current_handler"
+        echo -e "   ${BLUE}Expected:${NC} $expected_handler"
+        echo -e "   ${CYAN}Fix with:${NC} xdg-mime default $expected_handler x-scheme-handler/vscode"
+        if [[ "$current_handler" == *"snap"* ]] || [[ "$current_handler" == *"code_code"* ]]; then
+            echo -e "   ${CYAN}Note:${NC} Snap applications may have priority over user settings"
+        fi
+    fi
+    echo
+
+    # Check profile-specific handler
+    local profile_handler=$(xdg-mime query default "x-scheme-handler/vscode-$PROFILE_NAME" 2>/dev/null || echo "none")
+    local profile_registered=false
+    if [[ -f ~/.config/mimeapps.list ]] && grep -q "x-scheme-handler/vscode-$PROFILE_NAME=$expected_handler" ~/.config/mimeapps.list 2>/dev/null; then
+        profile_registered=true
+    fi
+
+    echo -e "${GREEN}🏷️ Profile-specific URI Handler (vscode-$PROFILE_NAME://)${NC}"
+    if [[ "$profile_handler" == "$expected_handler" ]] || [[ "$profile_registered" == true ]]; then
+        echo -e "   ${GREEN}✅ Correctly configured${NC}"
+        echo -e "   ${BLUE}Handler:${NC} $expected_handler"
+    else
+        echo -e "   ${YELLOW}⚠️ Not configured${NC}"
+        echo -e "   ${CYAN}Fix with:${NC} xdg-mime default $expected_handler x-scheme-handler/vscode-$PROFILE_NAME"
+    fi
+    echo
+
+    # Check desktop entry
+    local desktop_entry="$HOME/.local/share/applications/vscode-$PROFILE_NAME.desktop"
+    echo -e "${GREEN}🖥️ Desktop Entry:${NC}"
+    if [[ -f "$desktop_entry" ]]; then
+        echo -e "   ${GREEN}✅ Available${NC}"
+        echo -e "   ${BLUE}File:${NC} $desktop_entry"
+    else
+        echo -e "   ${YELLOW}⚠️ Not found${NC}"
+        echo -e "   ${CYAN}Recreate with:${NC} vscode-sandbox $PROFILE_NAME create"
+    fi
+    echo
+
+    # Test URI examples
+    echo -e "${GREEN}🧪 Test URI Examples:${NC}"
+    echo -e "   ${CYAN}File:${NC} vscode://file/path/to/file.js"
+    echo -e "   ${CYAN}Folder:${NC} vscode://folder$PROFILE_PROJECTS"
+    echo -e "   ${CYAN}Extension:${NC} vscode://extension/ms-python.python"
+    echo -e "   ${CYAN}Augment Auth:${NC} vscode://augment.vscode-augment/auth/result?code=...&state=..."
+    echo -e "   ${CYAN}Profile-specific:${NC} vscode-$PROFILE_NAME://file/path/to/file.js"
+    echo
+
+    # Quick fix command
+    echo -e "${GREEN}🔧 Quick Fix Commands:${NC}"
+    echo -e "   ${CYAN}Register this profile for vscode:// URIs:${NC}"
+    echo -e "   xdg-mime default vscode-$PROFILE_NAME.desktop x-scheme-handler/vscode"
+    echo
+    echo -e "   ${CYAN}Register profile-specific URIs:${NC}"
+    echo -e "   xdg-mime default vscode-$PROFILE_NAME.desktop x-scheme-handler/vscode-$PROFILE_NAME"
+    echo
+    echo -e "   ${CYAN}Test complex Augment URI:${NC}"
+    echo -e "   vscode-sandbox $PROFILE_NAME launch --open-url 'vscode://augment.vscode-augment/auth/result?code=test'"
+}
+
 # Project scaffolding within isolated environment
 scaffold_project() {
     if [[ ! -d "$PROFILE_ROOT" ]]; then
@@ -2566,6 +2715,9 @@ main() {
             ;;
         "status")
             show_profile_status
+            ;;
+        "uri-status")
+            show_uri_status
             ;;
         "scaffold")
             scaffold_project "$@"
