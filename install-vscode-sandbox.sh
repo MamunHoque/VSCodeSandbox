@@ -195,7 +195,7 @@ install_script() {
     
     # Copy script to global location
     cp "$temp_file" "$INSTALL_PATH"
-    chmod +x "$INSTALL_PATH"
+    chmod 755 "$INSTALL_PATH"
     
     # Clean up temporary file
     rm -f "$temp_file"
