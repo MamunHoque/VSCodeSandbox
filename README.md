@@ -20,9 +20,16 @@ VS Code Sandbox creates completely isolated VS Code environments that simulate f
 
 ## 🚀 **Quick Installation**
 
-### **Recommended: Unified Tool (One-Line Install)**
+### **Linux (Recommended: Unified Tool)**
 ```bash
 curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/install-vscode-sandbox.sh | sudo bash
+```
+
+### **macOS (Apple Silicon M4 Optimized)**
+```bash
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-sandbox-macos -o vscode-sandbox-macos
+chmod +x vscode-sandbox-macos
+sudo ./vscode-sandbox-macos --install
 ```
 
 ### **Manual Installation**
@@ -30,12 +37,28 @@ curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/instal
 git clone https://github.com/MamunHoque/VSCodeSandbox.git
 cd VSCodeSandbox
 chmod +x *.sh
+
+# For Linux
 sudo ./install-vscode-sandbox.sh
+
+# For macOS
+sudo ./vscode-sandbox-macos --install
 ```
+
+## 🖥️ **Platform Support**
+
+| Platform | Script | Features | Optimization |
+|----------|--------|----------|--------------|
+| **Linux** | `vscode-sandbox` | Full isolation with namespaces | Universal compatibility |
+| **macOS** | `vscode-sandbox-macos` | Native app bundles + URI handling | Apple Silicon M4 optimized |
+
+### **Platform-Specific Documentation**
+- **Linux**: This README (full feature documentation)
+- **macOS**: [README-macOS.md](README-macOS.md) (macOS-specific features and setup)
 
 ## 📋 **Usage**
 
-### **Basic Commands**
+### **Linux Commands**
 ```bash
 # Create isolated profile (basic security)
 vscode-sandbox myproject create
@@ -54,6 +77,27 @@ vscode-sandbox list
 
 # Update tool
 vscode-sandbox --update
+```
+
+### **macOS Commands**
+```bash
+# Create isolated profile with native macOS integration
+vscode-sandbox-macos myproject create
+
+# Create project within isolated profile
+vscode-sandbox-macos myproject scaffold my-app --type react --git --vscode
+
+# Launch isolated VS Code
+vscode-sandbox-macos myproject launch
+
+# Check URI handler status
+vscode-sandbox-macos myproject uri-status
+
+# List all profiles
+vscode-sandbox-macos list
+
+# Update tool
+vscode-sandbox-macos --update
 ```
 
 ## 🛡️ **Security Levels**
