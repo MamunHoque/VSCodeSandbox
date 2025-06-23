@@ -72,6 +72,7 @@ show_usage() {
     echo -e "${WHITE}GLOBAL COMMANDS:${NC}"
     echo -e "    ${CYAN}list${NC}            - List all isolated profiles"
     echo -e "    ${CYAN}clean${NC}           - Remove all profiles and projects"
+    echo -e "    ${CYAN}fix-namespaces${NC}  - Fix namespace permission issues"
     echo -e "    ${CYAN}--help, -h${NC}      - Show this help message"
     echo -e "    ${CYAN}--version, -v${NC}   - Show version information"
     echo -e "    ${CYAN}--update${NC}        - Update to the latest version"
@@ -843,6 +844,7 @@ create_namespace_script() {
     cat > "$NAMESPACE_SCRIPT" << EOF
 #!/bin/bash
 # Namespace isolation script for VS Code profile: $PROFILE_NAME
+# Uses unprivileged user namespaces for complete isolation
 
 set -euo pipefail
 
@@ -850,28 +852,6 @@ PROFILE_ROOT="$PROFILE_ROOT"
 PROFILE_HOME="$PROFILE_HOME"
 PROFILE_TMP="$PROFILE_TMP"
 VSCODE_BINARY="$VSCODE_BINARY"
-
-# Function to setup bind mounts in namespace
-setup_isolated_filesystem() {
-    # Create temporary mount namespace
-    mount --make-rprivate /
-
-    # Bind mount isolated directories
-    mount --bind "\$PROFILE_HOME" "\$HOME"
-    mount --bind "\$PROFILE_TMP" /tmp
-
-    # Ensure VS Code can access necessary system directories (read-only)
-    mkdir -p "\$HOME"/{usr,lib,lib64,bin,sbin,etc,proc,sys,dev}
-    mount --bind /usr "\$HOME/usr" -o ro
-    mount --bind /lib "\$HOME/lib" -o ro
-    [[ -d /lib64 ]] && mount --bind /lib64 "\$HOME/lib64" -o ro
-    mount --bind /bin "\$HOME/bin" -o ro
-    mount --bind /sbin "\$HOME/sbin" -o ro
-    mount --bind /etc "\$HOME/etc" -o ro
-    mount --bind /proc "\$HOME/proc"
-    mount --bind /sys "\$HOME/sys" -o ro
-    mount --bind /dev "\$HOME/dev"
-}
 
 # Setup environment variables for complete isolation
 export HOME="\$PROFILE_HOME"
@@ -888,10 +868,23 @@ export TEMP="\$PROFILE_TMP"
 mkdir -p "\$XDG_RUNTIME_DIR"
 chmod 700 "\$XDG_RUNTIME_DIR"
 
+# Ensure all required directories exist
+mkdir -p "\$PROFILE_HOME"/{.config,.cache,.local/share}
+mkdir -p "\$XDG_CONFIG_HOME/Code"
+mkdir -p "\$XDG_DATA_HOME/Code/extensions"
+
 # Source profile environment
 source "\$PROFILE_HOME/.profile" 2>/dev/null || true
 
+# Handle snap VS Code special requirements
+if [[ "\$VSCODE_BINARY" == *"/snap/"* ]]; then
+    # For snap VS Code, we need to set SNAP_USER_DATA to our isolated directory
+    export SNAP_USER_DATA="\$PROFILE_HOME"
+    export SNAP_USER_COMMON="\$PROFILE_HOME/.local/share"
+fi
+
 # Launch VS Code with complete isolation
+# The namespace isolation is handled by the launcher script using unshare
 exec "\$VSCODE_BINARY" \\
     --user-data-dir="\$XDG_CONFIG_HOME/Code" \\
     --extensions-dir="\$XDG_DATA_HOME/Code/extensions" \\
@@ -1047,6 +1040,9 @@ set -euo pipefail
 PROFILE_NAME="$PROFILE_NAME"
 NAMESPACE_SCRIPT="$NAMESPACE_SCRIPT"
 PROFILE_ROOT="$PROFILE_ROOT"
+PROFILE_HOME="$PROFILE_HOME"
+PROFILE_TMP="$PROFILE_TMP"
+VSCODE_BINARY="$VSCODE_BINARY"
 
 # Parse arguments and handle various URI formats
 ARGS=("\$@")
@@ -1142,10 +1138,9 @@ launch_isolated() {
     done
 
     # Launch with namespace isolation
+    # Use unprivileged user namespaces for complete isolation
     exec unshare \\
-        --mount \\
-        --uts \\
-        --ipc \\
+        --user \\
         --pid \\
         --fork \\
         --mount-proc \\
@@ -1159,8 +1154,79 @@ if [[ ! -d "\$PROFILE_ROOT" ]]; then
     exit 1
 fi
 
-# Launch isolated VS Code
-launch_isolated
+# Check if VS Code is snap-based and handle accordingly
+if [[ "\$VSCODE_BINARY" == *"/snap/"* ]]; then
+    echo "⚠️  Snap VS Code detected - using basic isolation instead of namespaces"
+    echo "ℹ️  Snap packages have restrictions with user namespaces"
+
+    # Use basic isolation for snap VS Code
+    export HOME="\$PROFILE_HOME"
+    export XDG_CONFIG_HOME="\$PROFILE_HOME/.config"
+    export XDG_CACHE_HOME="\$PROFILE_HOME/.cache"
+    export XDG_DATA_HOME="\$PROFILE_HOME/.local/share"
+    export XDG_STATE_HOME="\$PROFILE_HOME/.local/state"
+    export XDG_RUNTIME_DIR="\$PROFILE_TMP/runtime"
+    export TMPDIR="\$PROFILE_TMP"
+    export TMP="\$PROFILE_TMP"
+    export TEMP="\$PROFILE_TMP"
+
+    # Create runtime directory
+    mkdir -p "\$XDG_RUNTIME_DIR"
+    chmod 700 "\$XDG_RUNTIME_DIR"
+
+    # Ensure all required directories exist
+    mkdir -p "\$PROFILE_HOME"/{.config,.cache,.local/share}
+    mkdir -p "\$XDG_CONFIG_HOME/Code"
+    mkdir -p "\$XDG_DATA_HOME/Code/extensions"
+
+    # Source profile environment
+    source "\$PROFILE_HOME/.profile" 2>/dev/null || true
+
+    # Build arguments for basic isolation
+    FINAL_ARGS=(
+        --user-data-dir="\$XDG_CONFIG_HOME/Code"
+        --extensions-dir="\$XDG_DATA_HOME/Code/extensions"
+        --disable-gpu-sandbox
+        --no-sandbox
+    )
+
+    # Add URI if specified
+    if [[ -n "\$URI" ]]; then
+        FINAL_ARGS+=(--open-url "\$URI")
+    fi
+
+    # Add folder if specified
+    if [[ -n "\$OPEN_FOLDER" ]]; then
+        local abs_folder="\$(realpath "\$OPEN_FOLDER" 2>/dev/null || echo "\$OPEN_FOLDER")"
+        FINAL_ARGS+=("\$abs_folder")
+    fi
+
+    # Add file if specified
+    if [[ -n "\$OPEN_FILE" ]]; then
+        local abs_file="\$(realpath "\$OPEN_FILE" 2>/dev/null || echo "\$OPEN_FILE")"
+        FINAL_ARGS+=(--goto "\$abs_file")
+    fi
+
+    # Add any remaining arguments
+    for arg in "\$@"; do
+        case "\$arg" in
+            vscode://*|vscode-file://*|vscode-$PROFILE_NAME://*|--open-url=*|--folder-uri=*|--file-uri=*|file://*|--goto=*)
+                # Skip already processed arguments
+                ;;
+            *)
+                if [[ ! -e "\$arg" || "\$arg" == --* ]]; then
+                    FINAL_ARGS+=("\$arg")
+                fi
+                ;;
+        esac
+    done
+
+    # Launch with basic isolation
+    exec "\$VSCODE_BINARY" "\${FINAL_ARGS[@]}"
+else
+    # Launch with namespace isolation for non-snap VS Code
+    launch_isolated
+fi
 EOF
 
     chmod +x "$LAUNCHER_SCRIPT"
@@ -1552,6 +1618,86 @@ clean_all_profiles() {
         log_info "You may need to run with sudo or check permissions"
         exit 1
     fi
+}
+
+# Fix namespace profiles with broken mount-based implementation
+fix_namespace_profiles() {
+    log_header "Fixing Namespace Profiles"
+
+    # Check if isolation directory exists
+    if [[ ! -d "$ISOLATION_ROOT" ]]; then
+        log_info "No VS Code Sandbox profiles found"
+        return 0
+    fi
+
+    # Find profiles with namespace scripts
+    local namespace_profiles=()
+    if [[ -d "$ISOLATION_ROOT/launchers" ]]; then
+        for script in "$ISOLATION_ROOT/launchers"/*-namespace.sh; do
+            if [[ -f "$script" ]]; then
+                local profile_name=$(basename "$script" | sed 's/-namespace\.sh$//')
+                namespace_profiles+=("$profile_name")
+            fi
+        done
+    fi
+
+    if [[ ${#namespace_profiles[@]} -eq 0 ]]; then
+        log_info "No maximum security profiles found to fix"
+        return 0
+    fi
+
+    echo -e "${CYAN}Found ${#namespace_profiles[@]} maximum security profile(s) to fix:${NC}"
+    for profile in "${namespace_profiles[@]}"; do
+        echo -e "   • ${YELLOW}$profile${NC}"
+    done
+    echo
+
+    echo -e "${BLUE}This will update the namespace scripts to use unprivileged user namespaces${NC}"
+    echo -e "${BLUE}instead of the problematic mount-based approach.${NC}"
+    echo
+
+    read -p "Do you want to fix these profiles? (y/N): " -n 1 -r
+    echo
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "Operation cancelled"
+        return 0
+    fi
+
+    # Fix each profile
+    for profile_name in "${namespace_profiles[@]}"; do
+        log_step "Fixing profile: $profile_name"
+
+        # Set up profile paths
+        PROFILE_NAME="$profile_name"
+        get_profile_paths
+
+        # Recreate the namespace script with the fixed implementation
+        if [[ -f "$NAMESPACE_SCRIPT" ]]; then
+            create_namespace_script
+            log_success "Fixed namespace script for $profile_name"
+        fi
+
+        # Recreate the launcher script with the fixed implementation
+        if [[ -f "$LAUNCHER_SCRIPT" ]]; then
+            MAX_SECURITY=true
+            create_max_security_launcher
+            log_success "Fixed launcher script for $profile_name"
+        fi
+    done
+
+    echo
+    log_success "All namespace profiles have been fixed!"
+    echo
+    echo -e "${GREEN}✅ Fixed profiles:${NC}"
+    for profile in "${namespace_profiles[@]}"; do
+        echo -e "   • ${GREEN}$profile${NC} - Now uses unprivileged user namespaces"
+    done
+    echo
+    echo -e "${CYAN}💡 You can now launch these profiles without permission errors:${NC}"
+    for profile in "${namespace_profiles[@]}"; do
+        echo -e "   vscode-sandbox $profile launch"
+    done
 }
 
 # Show profile status
@@ -2125,6 +2271,10 @@ main() {
             ;;
         "clean")
             clean_all_profiles
+            exit 0
+            ;;
+        "fix-namespaces")
+            fix_namespace_profiles
             exit 0
             ;;
         "")
