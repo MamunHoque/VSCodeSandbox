@@ -71,6 +71,7 @@ show_usage() {
     echo
     echo -e "${WHITE}GLOBAL COMMANDS:${NC}"
     echo -e "    ${CYAN}list${NC}            - List all isolated profiles"
+    echo -e "    ${CYAN}clean${NC}           - Remove all profiles and projects"
     echo -e "    ${CYAN}--help, -h${NC}      - Show this help message"
     echo -e "    ${CYAN}--version, -v${NC}   - Show version information"
     echo -e "    ${CYAN}--update${NC}        - Update to the latest version"
@@ -117,6 +118,9 @@ show_usage() {
     echo
     echo -e "    # Update the tool"
     echo -e "    $SCRIPT_NAME --update"
+    echo
+    echo -e "    # Remove all profiles and projects"
+    echo -e "    $SCRIPT_NAME clean"
     echo
     echo -e "${WHITE}ENVIRONMENT VARIABLES:${NC}"
     echo -e "    ${CYAN}VSCODE_ISOLATION_ROOT${NC}  - Root directory for profiles (default: ~/.vscode-isolated)"
@@ -1466,6 +1470,88 @@ list_profiles() {
     echo "   • Use 'vscode-sandbox <profile> launch' to open a profile"
     echo "   • Use 'vscode-sandbox <profile> scaffold --type react' to create projects"
     echo "   • Use 'vscode-sandbox <profile> remove' to delete a profile"
+    echo "   • Use 'vscode-sandbox clean' to remove ALL profiles"
+}
+
+# Clean all profiles and projects
+clean_all_profiles() {
+    log_header "Cleaning All VS Code Sandbox Profiles"
+
+    # Check if isolation directory exists
+    if [[ ! -d "$ISOLATION_ROOT" ]]; then
+        log_info "No VS Code Sandbox profiles found"
+        log_info "Isolation directory does not exist: $ISOLATION_ROOT"
+        return 0
+    fi
+
+    # Count existing profiles
+    local profile_count=0
+    if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+        profile_count=$(find "$ISOLATION_ROOT/profiles" -maxdepth 1 -type d | wc -l)
+        ((profile_count--)) # Subtract 1 for the profiles directory itself
+    fi
+
+    if [[ $profile_count -eq 0 ]]; then
+        log_info "No profiles found to clean"
+        return 0
+    fi
+
+    # Show what will be removed
+    echo -e "${YELLOW}⚠️  WARNING: This will permanently remove:${NC}"
+    echo -e "   • ${RED}$profile_count profile(s)${NC}"
+    echo -e "   • ${RED}All projects and code${NC}"
+    echo -e "   • ${RED}All extensions and settings${NC}"
+    echo -e "   • ${RED}All launcher scripts${NC}"
+    echo -e "   • ${RED}Entire isolation directory: $ISOLATION_ROOT${NC}"
+    echo
+
+    # List profiles that will be removed
+    if [[ $profile_count -gt 0 ]]; then
+        echo -e "${CYAN}Profiles to be removed:${NC}"
+        for profile_dir in "$ISOLATION_ROOT/profiles"/*; do
+            if [[ -d "$profile_dir" ]]; then
+                local profile_name=$(basename "$profile_dir")
+                local security_level="Basic"
+                if [[ -f "$ISOLATION_ROOT/launchers/$profile_name-namespace.sh" ]]; then
+                    security_level="Maximum Security"
+                fi
+                echo -e "   • ${RED}$profile_name${NC} ($security_level)"
+            fi
+        done
+        echo
+    fi
+
+    # Confirmation prompt
+    echo -e "${YELLOW}This action cannot be undone!${NC}"
+    read -p "Are you sure you want to remove ALL profiles and projects? (type 'yes' to confirm): " -r
+    echo
+
+    if [[ "$REPLY" != "yes" ]]; then
+        log_info "Operation cancelled"
+        return 0
+    fi
+
+    # Remove everything
+    log_step "Removing all VS Code Sandbox data..."
+
+    # Remove the entire isolation directory
+    if rm -rf "$ISOLATION_ROOT"; then
+        log_success "All profiles and projects removed successfully"
+        echo
+        echo -e "${GREEN}✅ Cleanup completed:${NC}"
+        echo -e "   • Removed $profile_count profile(s)"
+        echo -e "   • Removed all projects and code"
+        echo -e "   • Removed all extensions and settings"
+        echo -e "   • Removed all launcher scripts"
+        echo -e "   • Removed isolation directory: $ISOLATION_ROOT"
+        echo
+        echo -e "${CYAN}💡 You can create new profiles anytime with:${NC}"
+        echo -e "   vscode-sandbox myproject create"
+    else
+        log_error "Failed to remove isolation directory"
+        log_info "You may need to run with sudo or check permissions"
+        exit 1
+    fi
 }
 
 # Show profile status
@@ -2035,6 +2121,10 @@ main() {
             ;;
         "list")
             list_profiles
+            exit 0
+            ;;
+        "clean")
+            clean_all_profiles
             exit 0
             ;;
         "")
