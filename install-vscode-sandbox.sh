@@ -140,44 +140,44 @@ check_permissions() {
 
 # Download the script
 download_script() {
-    log_step "Downloading VS Code Sandbox script..."
-    
+    log_step "Downloading VS Code Sandbox script..." >&2
+
     # Create temporary file
     local temp_file=$(mktemp)
-    
+
     # Download the script
     if command_exists "curl"; then
         if curl -sSL "$REPOSITORY_RAW_URL/vscode-sandbox" -o "$temp_file"; then
-            log_success "Downloaded VS Code Sandbox script"
+            log_success "Downloaded VS Code Sandbox script" >&2
         else
-            log_error "Failed to download script"
+            log_error "Failed to download script" >&2
             rm -f "$temp_file"
             exit 1
         fi
     elif command_exists "wget"; then
         if wget -q "$REPOSITORY_RAW_URL/vscode-sandbox" -O "$temp_file"; then
-            log_success "Downloaded VS Code Sandbox script"
+            log_success "Downloaded VS Code Sandbox script" >&2
         else
-            log_error "Failed to download script"
+            log_error "Failed to download script" >&2
             rm -f "$temp_file"
             exit 1
         fi
     fi
-    
+
     # Verify the downloaded file
     if [[ ! -s "$temp_file" ]]; then
-        log_error "Downloaded file is empty"
+        log_error "Downloaded file is empty" >&2
         rm -f "$temp_file"
         exit 1
     fi
-    
+
     # Check if it's a valid script
     if ! head -1 "$temp_file" | grep -q "#!/bin/bash"; then
-        log_error "Downloaded file is not a valid bash script"
+        log_error "Downloaded file is not a valid bash script" >&2
         rm -f "$temp_file"
         exit 1
     fi
-    
+
     echo "$temp_file"
 }
 
@@ -314,6 +314,7 @@ main() {
             show_banner
             check_requirements
             check_permissions
+            local temp_file
             temp_file=$(download_script)
             install_script "$temp_file"
             test_installation
