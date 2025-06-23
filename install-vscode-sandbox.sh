@@ -195,6 +195,9 @@ install_script() {
     
     # Copy script to global location
     cp "$temp_file" "$INSTALL_PATH"
+
+    # Set proper ownership and permissions
+    chown root:root "$INSTALL_PATH"
     chmod 755 "$INSTALL_PATH"
     
     # Clean up temporary file

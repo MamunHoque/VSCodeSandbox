@@ -88,12 +88,9 @@ Every isolated VS Code profile automatically includes:
 
 ### **Pre-installed Extensions**
 - 🤖 **Augment Extension** - AI-powered development assistance
-- 📝 **JSON Support** - Enhanced JSON editing
 - ⚙️ **EditorConfig** - Consistent coding styles
 - 🔧 **TypeScript** - Advanced TypeScript support
 - 🎨 **Tailwind CSS** - CSS framework support
-- 🐍 **Python** - Python development tools
-- 🔵 **Go** - Go language support
 - 🦀 **Rust** - Rust language support
 
 ### **Optimized Settings**

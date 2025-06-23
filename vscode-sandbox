@@ -357,7 +357,7 @@ This is your isolated VS Code environment. Everything here is completely separat
 
 ## Pre-installed Extensions:
 - 🤖 **Augment** - AI-powered development assistant
-- 📝 **Common Development Extensions** - JSON, TypeScript, Python, Go, Rust support
+- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS, Rust support
 
 ## Getting Started:
 1. Install extensions specific to this profile
@@ -458,7 +458,7 @@ This is your **maximum security** isolated VS Code environment using Linux names
 
 ## Pre-installed Extensions:
 - 🤖 **Augment** - AI-powered development assistant
-- 📝 **Common Development Extensions** - JSON, TypeScript, Python, Go, Rust support
+- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS, Rust support
 
 ## Profile Information:
 - **Profile Name**: $PROFILE_NAME
@@ -605,12 +605,9 @@ EOF
 
     # Also try to install some commonly useful extensions for development
     local common_extensions=(
-        "ms-vscode.vscode-json"
         "editorconfig.editorconfig"
         "ms-vscode.vscode-typescript-next"
         "bradlc.vscode-tailwindcss"
-        "ms-python.python"
-        "golang.go"
         "rust-lang.rust-analyzer"
     )
 
