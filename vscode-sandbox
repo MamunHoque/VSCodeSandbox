@@ -90,6 +90,13 @@ ${WHITE}ISOLATION OPTIONS:${NC}
     ${CYAN}--desktop${NC}       - Add desktop integration (with --max-security)
     ${CYAN}--no-extensions${NC} - Skip automatic extension installation
 
+${WHITE}URI SUPPORT:${NC}
+    ${CYAN}vscode://file/path${NC}              - Open specific file
+    ${CYAN}vscode://folder/path${NC}            - Open specific folder
+    ${CYAN}vscode-<profile>://file/path${NC}    - Profile-specific file URI
+    ${CYAN}file:///path/to/file${NC}            - Local file URI
+    ${CYAN}--open-url=vscode://...${NC}         - Explicit URI parameter
+
 ${WHITE}EXAMPLES:${NC}
     # Create isolated VS Code profile (basic isolation)
     $SCRIPT_NAME myproject create
@@ -688,6 +695,135 @@ EOF
     log_success "Augment-optimized settings created"
 }
 
+# Create project-specific URI handlers
+create_project_uri_handlers() {
+    local profile_type="$1"
+
+    log_step "Creating project-specific URI handlers..."
+
+    # Create URI handler for each project in the profile
+    if [[ -d "$PROFILE_PROJECTS" ]]; then
+        for project_dir in "$PROFILE_PROJECTS"/*; do
+            if [[ -d "$project_dir" ]]; then
+                local project_name=$(basename "$project_dir")
+                create_project_uri_handler "$project_name" "$project_dir" "$profile_type"
+            fi
+        done
+    fi
+
+    # Create a general project URI handler script
+    local general_handler="$PROFILE_ROOT/bin/project-uri-handler"
+    mkdir -p "$PROFILE_ROOT/bin"
+
+    cat > "$general_handler" << EOF
+#!/bin/bash
+# Project URI Handler for profile: $PROFILE_NAME
+# Handles project-specific vscode:// URIs
+
+set -euo pipefail
+
+PROFILE_NAME="$PROFILE_NAME"
+PROFILE_PROJECTS="$PROFILE_PROJECTS"
+LAUNCHER_SCRIPT="$LAUNCHER_SCRIPT"
+
+# Parse URI to extract project and file information
+URI="\$1"
+PROJECT=""
+FILE_PATH=""
+
+# Extract project name from URI patterns like:
+# vscode://file/path/to/project/file.js
+# vscode://folder/path/to/project
+if [[ "\$URI" =~ vscode://file/(.*) ]]; then
+    FILE_PATH="\${BASH_REMATCH[1]}"
+    # Try to determine project from file path
+    for project_dir in "\$PROFILE_PROJECTS"/*; do
+        if [[ -d "\$project_dir" ]]; then
+            project_name=\$(basename "\$project_dir")
+            if [[ "\$FILE_PATH" == *"/\$project_name/"* ]]; then
+                PROJECT="\$project_name"
+                break
+            fi
+        fi
+    done
+elif [[ "\$URI" =~ vscode://folder/(.*) ]]; then
+    FOLDER_PATH="\${BASH_REMATCH[1]}"
+    # Check if folder is within a project
+    for project_dir in "\$PROFILE_PROJECTS"/*; do
+        if [[ -d "\$project_dir" ]]; then
+            project_name=\$(basename "\$project_dir")
+            if [[ "\$FOLDER_PATH" == *"/\$project_name"* ]]; then
+                PROJECT="\$project_name"
+                break
+            fi
+        fi
+    done
+fi
+
+# Log the URI handling
+echo "[\$(date)] Handling URI: \$URI for profile: \$PROFILE_NAME, project: \$PROJECT" >> "\$PROFILE_ROOT/logs/project-uri.log"
+
+# Launch VS Code with the URI
+exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+EOF
+
+    chmod +x "$general_handler"
+
+    # Create logs directory
+    mkdir -p "$PROFILE_ROOT/logs"
+
+    log_success "Project-specific URI handlers created"
+}
+
+# Create URI handler for a specific project
+create_project_uri_handler() {
+    local project_name="$1"
+    local project_path="$2"
+    local profile_type="$3"
+
+    local project_handler="$PROFILE_ROOT/bin/$project_name-uri-handler"
+
+    cat > "$project_handler" << EOF
+#!/bin/bash
+# URI Handler for project: $project_name in profile: $PROFILE_NAME
+
+set -euo pipefail
+
+PROJECT_NAME="$project_name"
+PROJECT_PATH="$project_path"
+PROFILE_NAME="$PROFILE_NAME"
+LAUNCHER_SCRIPT="$LAUNCHER_SCRIPT"
+
+URI="\$1"
+
+# Log the URI handling
+echo "[\$(date)] Project \$PROJECT_NAME handling URI: \$URI" >> "$PROFILE_ROOT/logs/project-uri.log"
+
+# Handle different URI types for this specific project
+case "\$URI" in
+    vscode://file/*)
+        # Open specific file in this project
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+        ;;
+    vscode://folder/*)
+        # Open folder in this project
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+        ;;
+    vscode-$PROFILE_NAME://*)
+        # Profile-specific URI
+        STANDARD_URI="\${URI/vscode-$PROFILE_NAME:/vscode:}"
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$STANDARD_URI"
+        ;;
+    *)
+        # Default: open the project folder
+        exec "\$LAUNCHER_SCRIPT" "\$PROJECT_PATH"
+        ;;
+esac
+EOF
+
+    chmod +x "$project_handler"
+}
+
 # Create namespace isolation script for maximum security
 create_namespace_script() {
     log_step "Creating namespace isolation script"
@@ -767,11 +903,12 @@ create_launcher_script() {
 
 # Create basic launcher script
 create_basic_launcher() {
-    log_step "Creating basic launcher script"
+    log_step "Creating basic launcher script with comprehensive URI support"
 
     cat > "$LAUNCHER_SCRIPT" << EOF
 #!/bin/bash
 # VS Code Launcher for isolated profile: $PROFILE_NAME
+# Supports comprehensive URI handling
 
 set -euo pipefail
 
@@ -789,26 +926,109 @@ if [[ ! -d "\$PROFILE_ROOT" ]]; then
     exit 1
 fi
 
-# Launch VS Code with isolated directories
-exec "\$VSCODE_BINARY" \\
-    --user-data-dir="\$PROFILE_CONFIG" \\
-    --extensions-dir="\$PROFILE_EXTENSIONS" \\
-    "\$PROFILE_PROJECTS" \\
-    "\$@"
+# Parse arguments and handle various URI formats
+URI=""
+OPEN_FOLDER=""
+OPEN_FILE=""
+EXTRA_ARGS=()
+
+# Enhanced argument processing
+for arg in "\$@"; do
+    case "\$arg" in
+        vscode://*)
+            URI="\$arg"
+            ;;
+        vscode-file://*)
+            URI="\$arg"
+            ;;
+        vscode-$PROFILE_NAME://*)
+            # Convert profile-specific URI to standard vscode:// URI
+            URI="\${arg/vscode-$PROFILE_NAME:/vscode:}"
+            ;;
+        --open-url=*)
+            URI="\${arg#--open-url=}"
+            ;;
+        --folder-uri=*)
+            OPEN_FOLDER="\${arg#--folder-uri=}"
+            ;;
+        --file-uri=*)
+            OPEN_FILE="\${arg#--file-uri=}"
+            ;;
+        file://*)
+            # Handle file:// URIs by converting to local path
+            local file_path="\${arg#file://}"
+            if [[ -e "\$file_path" ]]; then
+                if [[ -d "\$file_path" ]]; then
+                    OPEN_FOLDER="\$file_path"
+                else
+                    OPEN_FILE="\$file_path"
+                fi
+            fi
+            ;;
+        --goto=*)
+            # Handle --goto=file:line:column format
+            URI="vscode://file\${arg#--goto=}"
+            ;;
+        *)
+            # Check if it's a file or directory path
+            if [[ -e "\$arg" && "\$arg" != --* ]]; then
+                if [[ -d "\$arg" ]]; then
+                    OPEN_FOLDER="\$arg"
+                else
+                    OPEN_FILE="\$arg"
+                fi
+            else
+                EXTRA_ARGS+=("\$arg")
+            fi
+            ;;
+    esac
+done
+
+# Build final arguments
+FINAL_ARGS=(
+    --user-data-dir="\$PROFILE_CONFIG"
+    --extensions-dir="\$PROFILE_EXTENSIONS"
+    --disable-gpu-sandbox
+    --no-sandbox
+)
+
+# Add URI if specified
+if [[ -n "\$URI" ]]; then
+    FINAL_ARGS+=(--open-url "\$URI")
+fi
+
+# Add folder if specified (default to projects directory if none specified)
+if [[ -n "\$OPEN_FOLDER" ]]; then
+    FINAL_ARGS+=("\$OPEN_FOLDER")
+elif [[ \${#EXTRA_ARGS[@]} -eq 0 && -z "\$URI" && -z "\$OPEN_FILE" ]]; then
+    # No specific target, open projects directory
+    FINAL_ARGS+=("\$PROFILE_PROJECTS")
+fi
+
+# Add file if specified
+if [[ -n "\$OPEN_FILE" ]]; then
+    FINAL_ARGS+=(--goto "\$OPEN_FILE")
+fi
+
+# Add extra arguments
+FINAL_ARGS+=("\${EXTRA_ARGS[@]}")
+
+# Launch VS Code with isolated profile
+exec "\$VSCODE_BINARY" "\${FINAL_ARGS[@]}"
 EOF
 
     chmod +x "$LAUNCHER_SCRIPT"
-    log_success "Basic launcher script created"
+    log_success "Basic launcher script created with comprehensive URI support"
 }
 
 # Create maximum security launcher script
 create_max_security_launcher() {
-    log_step "Creating maximum security launcher script with namespace isolation"
+    log_step "Creating maximum security launcher script with comprehensive URI support"
 
     cat > "$LAUNCHER_SCRIPT" << EOF
 #!/bin/bash
 # Enhanced VS Code Launcher for profile: $PROFILE_NAME
-# Uses Linux namespaces for complete isolation
+# Uses Linux namespaces for complete isolation with comprehensive URI support
 
 set -euo pipefail
 
@@ -816,21 +1036,58 @@ PROFILE_NAME="$PROFILE_NAME"
 NAMESPACE_SCRIPT="$NAMESPACE_SCRIPT"
 PROFILE_ROOT="$PROFILE_ROOT"
 
-# Parse arguments
+# Parse arguments and handle various URI formats
 ARGS=("\$@")
 URI=""
 OPEN_FOLDER=""
+OPEN_FILE=""
 
-# Process arguments
+# Enhanced argument processing
 for arg in "\$@"; do
     case "\$arg" in
         vscode://*)
             URI="\$arg"
             ;;
+        vscode-file://*)
+            URI="\$arg"
+            ;;
+        vscode-$PROFILE_NAME://*)
+            # Convert profile-specific URI to standard vscode:// URI
+            URI="\${arg/vscode-$PROFILE_NAME:/vscode:}"
+            ;;
+        --open-url=*)
+            URI="\${arg#--open-url=}"
+            ;;
         --folder-uri=*)
             OPEN_FOLDER="\${arg#--folder-uri=}"
             ;;
+        --file-uri=*)
+            OPEN_FILE="\${arg#--file-uri=}"
+            ;;
+        file://*)
+            # Handle file:// URIs by converting to local path
+            local file_path="\${arg#file://}"
+            if [[ -e "\$file_path" ]]; then
+                if [[ -d "\$file_path" ]]; then
+                    OPEN_FOLDER="\$file_path"
+                else
+                    OPEN_FILE="\$file_path"
+                fi
+            fi
+            ;;
+        --goto=*)
+            # Handle --goto=file:line:column format
+            URI="vscode://file\${arg#--goto=}"
+            ;;
         *)
+            # Check if it's a file or directory path
+            if [[ -e "\$arg" && "\$arg" != --* ]]; then
+                if [[ -d "\$arg" ]]; then
+                    OPEN_FOLDER="\$arg"
+                else
+                    OPEN_FILE="\$arg"
+                fi
+            fi
             ;;
     esac
 done
@@ -839,9 +1096,38 @@ done
 launch_isolated() {
     local extra_args=()
 
-    # Add URI or folder if specified
-    [[ -n "\$URI" ]] && extra_args+=("--open-url" "\$URI")
-    [[ -n "\$OPEN_FOLDER" ]] && extra_args+=("\$OPEN_FOLDER")
+    # Add URI if specified
+    if [[ -n "\$URI" ]]; then
+        extra_args+=("--open-url" "\$URI")
+    fi
+
+    # Add folder if specified
+    if [[ -n "\$OPEN_FOLDER" ]]; then
+        # Ensure folder path is absolute and within allowed areas
+        local abs_folder="\$(realpath "\$OPEN_FOLDER" 2>/dev/null || echo "\$OPEN_FOLDER")"
+        extra_args+=("\$abs_folder")
+    fi
+
+    # Add file if specified
+    if [[ -n "\$OPEN_FILE" ]]; then
+        # Ensure file path is absolute
+        local abs_file="\$(realpath "\$OPEN_FILE" 2>/dev/null || echo "\$OPEN_FILE")"
+        extra_args+=("--goto" "\$abs_file")
+    fi
+
+    # Add any remaining arguments that weren't parsed
+    for arg in "\$@"; do
+        case "\$arg" in
+            vscode://*|vscode-file://*|vscode-$PROFILE_NAME://*|--open-url=*|--folder-uri=*|--file-uri=*|file://*|--goto=*)
+                # Skip already processed arguments
+                ;;
+            *)
+                if [[ ! -e "\$arg" || "\$arg" == --* ]]; then
+                    extra_args+=("\$arg")
+                fi
+                ;;
+        esac
+    done
 
     # Launch with namespace isolation
     exec unshare \\
@@ -866,7 +1152,7 @@ launch_isolated
 EOF
 
     chmod +x "$LAUNCHER_SCRIPT"
-    log_success "Maximum security launcher script created"
+    log_success "Maximum security launcher script created with comprehensive URI support"
 }
 
 # Create desktop integration for maximum security
@@ -875,7 +1161,7 @@ create_desktop_integration() {
         return
     fi
 
-    log_step "Creating desktop integration"
+    log_step "Creating desktop integration with comprehensive URI support"
 
     # Create desktop entry
     cat > "$DESKTOP_ENTRY" << EOF
@@ -887,12 +1173,12 @@ Icon=code
 Terminal=false
 Type=Application
 Categories=Development;IDE;
-MimeType=x-scheme-handler/vscode-$PROFILE_NAME;
+MimeType=x-scheme-handler/vscode;x-scheme-handler/vscode-$PROFILE_NAME;x-scheme-handler/vscode-file;x-scheme-handler/vscode-insiders;
 StartupNotify=true
 StartupWMClass=code
 EOF
 
-    # Create MIME type for this specific profile
+    # Create comprehensive MIME types for VS Code URIs
     mkdir -p "$PROFILE_LOCAL/share/mime/packages"
     cat > "$PROFILE_LOCAL/share/mime/packages/vscode-$PROFILE_NAME.xml" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -901,8 +1187,65 @@ EOF
         <comment>VS Code $PROFILE_NAME Profile URI</comment>
         <glob pattern="vscode-$PROFILE_NAME:*"/>
     </mime-type>
+    <mime-type type="x-scheme-handler/vscode">
+        <comment>VS Code URI for $PROFILE_NAME Profile</comment>
+        <glob pattern="vscode:*"/>
+    </mime-type>
+    <mime-type type="x-scheme-handler/vscode-file">
+        <comment>VS Code File URI for $PROFILE_NAME Profile</comment>
+        <glob pattern="vscode-file:*"/>
+    </mime-type>
 </mime-info>
 EOF
+
+    # Create URI handler script for comprehensive vscode:// support
+    local uri_handler="$PROFILE_LOCAL/bin/vscode-uri-handler"
+    mkdir -p "$PROFILE_LOCAL/bin"
+    cat > "$uri_handler" << EOF
+#!/bin/bash
+# VS Code URI Handler for profile: $PROFILE_NAME
+# Handles vscode://, vscode-file://, and profile-specific URIs
+
+set -euo pipefail
+
+URI="\$1"
+PROFILE_NAME="$PROFILE_NAME"
+LAUNCHER_SCRIPT="$LAUNCHER_SCRIPT"
+
+# Log URI handling for debugging
+echo "[\$(date)] Handling URI: \$URI for profile: \$PROFILE_NAME" >> "$PROFILE_LOCAL/logs/uri-handler.log"
+
+# Parse different URI types
+case "\$URI" in
+    vscode://*)
+        # Standard VS Code URI (vscode://file/path, vscode://extension/id, etc.)
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+        ;;
+    vscode-file://*)
+        # VS Code file URI
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+        ;;
+    vscode-$PROFILE_NAME://*)
+        # Profile-specific URI
+        # Convert to standard vscode:// URI
+        STANDARD_URI="\${URI/vscode-$PROFILE_NAME:/vscode:}"
+        exec "\$LAUNCHER_SCRIPT" --open-url "\$STANDARD_URI"
+        ;;
+    *)
+        # Fallback: treat as file path or folder
+        if [[ -e "\$URI" ]]; then
+            exec "\$LAUNCHER_SCRIPT" "\$URI"
+        else
+            exec "\$LAUNCHER_SCRIPT" --open-url "\$URI"
+        fi
+        ;;
+esac
+EOF
+
+    chmod +x "$uri_handler"
+
+    # Create logs directory
+    mkdir -p "$PROFILE_LOCAL/logs"
 
     # Update MIME database for this profile
     if command_exists "update-mime-database"; then
@@ -914,7 +1257,15 @@ EOF
         update-desktop-database "$PROFILE_LOCAL/share/applications" 2>/dev/null || true
     fi
 
-    log_success "Desktop integration created"
+    # Register as default handler for this profile's URIs
+    if command_exists "xdg-mime"; then
+        xdg-mime default "vscode-$PROFILE_NAME.desktop" "x-scheme-handler/vscode-$PROFILE_NAME" 2>/dev/null || true
+        # Optionally register for standard vscode:// URIs (user choice)
+        log_info "To make this profile handle all vscode:// URIs, run:"
+        log_info "xdg-mime default vscode-$PROFILE_NAME.desktop x-scheme-handler/vscode"
+    fi
+
+    log_success "Desktop integration created with comprehensive URI support"
 }
 
 # Create profile function
@@ -964,6 +1315,13 @@ create_profile() {
     else
         log_info "Skipping automatic extension installation (--no-extensions flag)"
         log_info "You can install Augment and other extensions manually later"
+    fi
+
+    # Create project-specific URI handlers
+    if [[ "$MAX_SECURITY" == true ]]; then
+        create_project_uri_handlers "max-security"
+    else
+        create_project_uri_handlers "basic"
     fi
 
     log_success "Profile '$PROFILE_NAME' created successfully!"
@@ -1324,9 +1682,13 @@ scaffold_project() {
 
     cd - >/dev/null
 
+    # Create URI handler for this project
+    create_project_uri_handler "$project_name" "$project_path" "basic"
+
     log_success "Project '$project_name' created successfully in isolated profile '$PROFILE_NAME'!"
     echo -e "${BLUE}📁${NC} Project path: $project_path"
     echo -e "${CYAN}💡${NC} Open with: vscode-sandbox $PROFILE_NAME launch"
+    echo -e "${CYAN}🔗${NC} URI support: vscode://file$project_path/filename or vscode://folder$project_path"
 }
 
 # Simple project creation functions
