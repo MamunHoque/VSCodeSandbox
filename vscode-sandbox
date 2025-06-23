@@ -58,73 +58,71 @@ EOF
 
 # Show usage information
 show_usage() {
-    cat << EOF
-${WHITE}USAGE:${NC}
-    $SCRIPT_NAME <profile-name> [command] [options]
-    $SCRIPT_NAME [global-command] [options]
-
-${WHITE}PROFILE COMMANDS:${NC}
-    ${CYAN}create${NC}          - Create and launch isolated VS Code profile (default)
-    ${CYAN}launch${NC}          - Launch existing profile
-    ${CYAN}remove${NC}          - Remove profile completely
-    ${CYAN}status${NC}          - Show profile status and information
-    ${CYAN}scaffold${NC}        - Create project template within profile
-
-${WHITE}GLOBAL COMMANDS:${NC}
-    ${CYAN}list${NC}            - List all isolated profiles
-    ${CYAN}--help, -h${NC}      - Show this help message
-    ${CYAN}--version, -v${NC}   - Show version information
-    ${CYAN}--update${NC}        - Update to the latest version
-    ${CYAN}--install${NC}       - Install globally to /usr/local/bin
-    ${CYAN}--uninstall${NC}     - Remove global installation
-
-${WHITE}SCAFFOLD OPTIONS:${NC}
-    ${CYAN}--type <type>${NC}   - Project type (react, node, python, go, static)
-    ${CYAN}--git${NC}           - Initialize Git repository
-    ${CYAN}--vscode${NC}        - Add VS Code configuration
-    ${CYAN}--docker${NC}        - Add Docker configuration
-
-${WHITE}ISOLATION OPTIONS:${NC}
-    ${CYAN}--max-security${NC}  - Enable maximum security with Linux namespaces
-    ${CYAN}--basic${NC}         - Use basic isolation (default)
-    ${CYAN}--desktop${NC}       - Add desktop integration (with --max-security)
-    ${CYAN}--no-extensions${NC} - Skip automatic extension installation
-
-${WHITE}URI SUPPORT:${NC}
-    ${CYAN}vscode://file/path${NC}              - Open specific file
-    ${CYAN}vscode://folder/path${NC}            - Open specific folder
-    ${CYAN}vscode-<profile>://file/path${NC}    - Profile-specific file URI
-    ${CYAN}file:///path/to/file${NC}            - Local file URI
-    ${CYAN}--open-url=vscode://...${NC}         - Explicit URI parameter
-
-${WHITE}EXAMPLES:${NC}
-    # Create isolated VS Code profile (basic isolation)
-    $SCRIPT_NAME myproject create
-
-    # Create maximum security isolated profile
-    $SCRIPT_NAME myproject create --max-security
-
-    # Create with desktop integration and maximum security
-    $SCRIPT_NAME myproject create --max-security --desktop
-
-    # Launch existing profile
-    $SCRIPT_NAME myproject launch
-
-    # Create project within isolated profile
-    $SCRIPT_NAME myproject scaffold --type react --git --vscode
-
-    # List all profiles
-    $SCRIPT_NAME list
-
-    # Update the tool
-    $SCRIPT_NAME --update
-
-${WHITE}ENVIRONMENT VARIABLES:${NC}
-    ${CYAN}VSCODE_ISOLATION_ROOT${NC}  - Root directory for profiles (default: ~/.vscode-isolated)
-    ${CYAN}VSCODE_BINARY${NC}          - Path to VS Code binary (default: auto-detect)
-
-${WHITE}REPOSITORY:${NC} $REPOSITORY_URL
-EOF
+    echo -e "${WHITE}USAGE:${NC}"
+    echo -e "    $SCRIPT_NAME <profile-name> [command] [options]"
+    echo -e "    $SCRIPT_NAME [global-command] [options]"
+    echo
+    echo -e "${WHITE}PROFILE COMMANDS:${NC}"
+    echo -e "    ${CYAN}create${NC}          - Create and launch isolated VS Code profile (default)"
+    echo -e "    ${CYAN}launch${NC}          - Launch existing profile"
+    echo -e "    ${CYAN}remove${NC}          - Remove profile completely"
+    echo -e "    ${CYAN}status${NC}          - Show profile status and information"
+    echo -e "    ${CYAN}scaffold${NC}        - Create project template within profile"
+    echo
+    echo -e "${WHITE}GLOBAL COMMANDS:${NC}"
+    echo -e "    ${CYAN}list${NC}            - List all isolated profiles"
+    echo -e "    ${CYAN}--help, -h${NC}      - Show this help message"
+    echo -e "    ${CYAN}--version, -v${NC}   - Show version information"
+    echo -e "    ${CYAN}--update${NC}        - Update to the latest version"
+    echo -e "    ${CYAN}--install${NC}       - Install globally to /usr/local/bin"
+    echo -e "    ${CYAN}--uninstall${NC}     - Remove global installation"
+    echo
+    echo -e "${WHITE}SCAFFOLD OPTIONS:${NC}"
+    echo -e "    ${CYAN}--type <type>${NC}   - Project type (react, node, python, go, static)"
+    echo -e "    ${CYAN}--git${NC}           - Initialize Git repository"
+    echo -e "    ${CYAN}--vscode${NC}        - Add VS Code configuration"
+    echo -e "    ${CYAN}--docker${NC}        - Add Docker configuration"
+    echo
+    echo -e "${WHITE}ISOLATION OPTIONS:${NC}"
+    echo -e "    ${CYAN}--max-security${NC}  - Enable maximum security with Linux namespaces"
+    echo -e "    ${CYAN}--basic${NC}         - Use basic isolation (default)"
+    echo -e "    ${CYAN}--desktop${NC}       - Add desktop integration (with --max-security)"
+    echo -e "    ${CYAN}--no-extensions${NC} - Skip automatic extension installation"
+    echo
+    echo -e "${WHITE}URI SUPPORT:${NC}"
+    echo -e "    ${CYAN}vscode://file/path${NC}              - Open specific file"
+    echo -e "    ${CYAN}vscode://folder/path${NC}            - Open specific folder"
+    echo -e "    ${CYAN}vscode-<profile>://file/path${NC}    - Profile-specific file URI"
+    echo -e "    ${CYAN}file:///path/to/file${NC}            - Local file URI"
+    echo -e "    ${CYAN}--open-url=vscode://...${NC}         - Explicit URI parameter"
+    echo
+    echo -e "${WHITE}EXAMPLES:${NC}"
+    echo -e "    # Create isolated VS Code profile (basic isolation)"
+    echo -e "    $SCRIPT_NAME myproject create"
+    echo
+    echo -e "    # Create maximum security isolated profile"
+    echo -e "    $SCRIPT_NAME myproject create --max-security"
+    echo
+    echo -e "    # Create with desktop integration and maximum security"
+    echo -e "    $SCRIPT_NAME myproject create --max-security --desktop"
+    echo
+    echo -e "    # Launch existing profile"
+    echo -e "    $SCRIPT_NAME myproject launch"
+    echo
+    echo -e "    # Create project within isolated profile"
+    echo -e "    $SCRIPT_NAME myproject scaffold --type react --git --vscode"
+    echo
+    echo -e "    # List all profiles"
+    echo -e "    $SCRIPT_NAME list"
+    echo
+    echo -e "    # Update the tool"
+    echo -e "    $SCRIPT_NAME --update"
+    echo
+    echo -e "${WHITE}ENVIRONMENT VARIABLES:${NC}"
+    echo -e "    ${CYAN}VSCODE_ISOLATION_ROOT${NC}  - Root directory for profiles (default: ~/.vscode-isolated)"
+    echo -e "    ${CYAN}VSCODE_BINARY${NC}          - Path to VS Code binary (default: auto-detect)"
+    echo
+    echo -e "${WHITE}REPOSITORY:${NC} $REPOSITORY_URL"
 }
 
 # Show version information
@@ -296,14 +294,28 @@ uninstall_globally() {
 check_namespace_support() {
     if ! command_exists "unshare"; then
         log_error "unshare command not available. Please install util-linux package."
-        exit 1
+        log_info "Falling back to basic isolation mode..."
+        MAX_SECURITY=false
+        return 1
     fi
 
     # Test if we can create user namespaces
     if ! unshare -U true 2>/dev/null; then
-        log_warning "User namespaces not available. Some isolation features will be limited."
-        log_warning "Consider running: echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone"
+        log_warning "User namespaces not available. Cannot use maximum security mode."
+        log_warning "This could be due to:"
+        log_warning "  • Kernel configuration (unprivileged_userns_clone disabled)"
+        log_warning "  • System security policy"
+        log_warning "  • Container environment restrictions"
+        log_info ""
+        log_info "To enable user namespaces, try:"
+        log_info "  echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone"
+        log_info ""
+        log_info "Falling back to basic isolation mode..."
+        MAX_SECURITY=false
+        return 1
     fi
+
+    return 0
 }
 
 # Profile paths
@@ -357,7 +369,7 @@ This is your isolated VS Code environment. Everything here is completely separat
 
 ## Pre-installed Extensions:
 - 🤖 **Augment** - AI-powered development assistant
-- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS, Rust support
+- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS
 
 ## Getting Started:
 1. Install extensions specific to this profile
@@ -458,7 +470,7 @@ This is your **maximum security** isolated VS Code environment using Linux names
 
 ## Pre-installed Extensions:
 - 🤖 **Augment** - AI-powered development assistant
-- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS, Rust support
+- 📝 **Essential Development Extensions** - EditorConfig, TypeScript, Tailwind CSS
 
 ## Profile Information:
 - **Profile Name**: $PROFILE_NAME
@@ -608,7 +620,6 @@ EOF
         "editorconfig.editorconfig"
         "ms-vscode.vscode-typescript-next"
         "bradlc.vscode-tailwindcss"
-        "rust-lang.rust-analyzer"
     )
 
     log_info "Installing common development extensions..."
@@ -1281,7 +1292,9 @@ create_profile() {
 
     if [[ "$MAX_SECURITY" == true ]]; then
         log_header "Creating MAXIMUM SECURITY isolated VS Code profile: $PROFILE_NAME"
-        check_namespace_support
+        if ! check_namespace_support; then
+            log_header "Creating isolated VS Code profile: $PROFILE_NAME (Basic Mode)"
+        fi
     else
         log_header "Creating isolated VS Code profile: $PROFILE_NAME"
     fi

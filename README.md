@@ -91,7 +91,6 @@ Every isolated VS Code profile automatically includes:
 - ⚙️ **EditorConfig** - Consistent coding styles
 - 🔧 **TypeScript** - Advanced TypeScript support
 - 🎨 **Tailwind CSS** - CSS framework support
-- 🦀 **Rust** - Rust language support
 
 ### **Optimized Settings**
 - **Font Configuration**: Fira Code, Cascadia Code, JetBrains Mono with ligatures
