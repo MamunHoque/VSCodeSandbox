@@ -15,7 +15,7 @@ SECURITY_TEST_MODE="${VSCODE_SECURITY_TEST:-false}"
 # Handle global commands first (before any processing)
 case "${1:-}" in
     "--version"|"-v")
-        echo "VS Code Sandbox v4.0.0 - Security Testing Edition"
+        echo "VS Code Sandbox v4.1.0 - Anti-Detection Edition"
         echo "Platform: Universal (macOS, Linux, Unix)"
         echo "Author: Enhanced for security testing and maximum isolation"
         echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
@@ -26,7 +26,7 @@ case "${1:-}" in
         ;;
     "--help"|"-h"|"help")
         cat << EOF
-VS Code Sandbox v4.0.0 - Security Testing Edition
+VS Code Sandbox v4.1.0 - Anti-Detection Edition
 
 Usage: $0 <profile_name> [command] [options]
        $0 <global_command>
@@ -146,7 +146,7 @@ log_error() { echo -e "${RED}❌${NC} $1"; }
 # Usage function
 usage() {
     cat << EOF
-VS Code Sandbox v4.0.0 - Security Testing Edition
+VS Code Sandbox v4.1.0 - Anti-Detection Edition
 
 Usage: $0 <profile_name> [command] [options]
 
