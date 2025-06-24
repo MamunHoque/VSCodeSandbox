@@ -4,12 +4,13 @@
 
 VS Code Sandbox creates completely isolated VS Code environments that work seamlessly across macOS, Linux, and all VS Code installation types. Features intelligent platform detection, automatic Augment extension installation, and adaptive security levels from basic isolation to enterprise-grade security using Linux namespaces.
 
-## ⚡ **One-Line Installation**
+## ⚡ **Quick Installation**
 
-Get started instantly with a single command:
+Get started instantly with two simple commands:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh && chmod +x vscode-isolate.sh && ./vscode-isolate.sh myproject create
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh && chmod +x vscode-isolate.sh
+./vscode-isolate.sh myproject create
 ```
 
 That's it! VS Code opens with complete isolation, pre-installed Augment extension, and full cross-platform compatibility.
