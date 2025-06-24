@@ -29,13 +29,16 @@ case "${1:-}" in
 VS Code Sandbox v4.0.0 - Security Testing Edition
 
 Usage: $0 <profile_name> [command] [options]
+       $0 <global_command>
 
 Commands:
     create      Create and launch isolated VS Code profile (default)
     launch      Launch existing profile
     remove      Remove profile completely
-    list        List all profiles
     status      Show profile status
+
+Global Commands:
+    list        List all profiles
     --version   Show version information
     --help      Show this help message
 
@@ -44,7 +47,7 @@ Examples:
     $0 myproject launch            # Launch existing 'myproject' profile
     $0 myproject launch "vscode://file/path/to/file.js"  # Launch with VS Code URI
     $0 myproject remove            # Remove 'myproject' profile
-    $0 "" list                     # List all profiles
+    $0 list                        # List all profiles (IMPROVED!)
 
 URI Support:
     $0 myproject launch "vscode://file/path/to/file.js"     # Open specific file
@@ -81,8 +84,17 @@ esac
 
 # Configuration
 ISOLATION_ROOT="${VSCODE_ISOLATION_ROOT:-$HOME/.vscode-isolated}"
-PROFILE_NAME="${1:-}"
-COMMAND="${2:-create}"
+
+# Smart command parsing - handle global commands first
+if [[ "${1:-}" == "list" || "${1:-}" == "--version" || "${1:-}" == "--help" ]]; then
+    # Global commands don't need a profile name
+    PROFILE_NAME=""
+    COMMAND="${1:-}"
+else
+    # Regular profile-specific commands
+    PROFILE_NAME="${1:-}"
+    COMMAND="${2:-create}"
+fi
 
 # Parse command line arguments for security testing flag
 for arg in "$@"; do
@@ -139,7 +151,7 @@ Examples:
     $0 myproject launch            # Launch existing 'myproject' profile
     $0 myproject launch "vscode://file/path/to/file.js"  # Launch with VS Code URI
     $0 myproject remove            # Remove 'myproject' profile
-    $0 "" list                     # List all profiles
+    $0 list                        # List all profiles (IMPROVED!)
 
 Security Testing Examples:
     $0 test1 create --security-test             # Create profile with fake identifiers (simple)
@@ -177,9 +189,9 @@ EOF
 
 # Global commands are handled above, continue with normal processing
 
-# Validate input
-if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" ]]; then
-    log_error "Profile name is required"
+# Validate input - only require profile name for profile-specific commands
+if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" && "$COMMAND" != "--version" && "$COMMAND" != "--help" ]]; then
+    log_error "Profile name is required for command: $COMMAND"
     usage
     exit 1
 fi
@@ -497,7 +509,7 @@ $0 $PROFILE_NAME launch
 $0 $PROFILE_NAME remove
 
 # List all profiles
-$0 "" list
+$0 list
 \`\`\`
 
 Happy coding! 🚀
@@ -1073,7 +1085,7 @@ create_profile() {
     echo "   • Each profile is completely isolated from others and the host system"
     echo "   • Use '$0 $PROFILE_NAME launch' to start this profile again"
     echo "   • Use '$0 $PROFILE_NAME remove' to completely remove this profile"
-    echo "   • Use '$0 \"\" list' to see all profiles"
+    echo "   • Use '$0 list' to see all profiles"
     if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
         echo "   • Security testing mode creates fake system identifiers for bypass testing"
         echo "   • Use 'VSCODE_SECURITY_TEST=true $0 <profile> create' to enable testing mode"

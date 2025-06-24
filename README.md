@@ -101,7 +101,7 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test-profile create
 ./vscode-isolate.sh myproject launch "vscode://extension/ms-python.python"
 
 # List all profiles
-./vscode-isolate.sh "" list
+./vscode-isolate.sh list
 
 # Check profile status
 ./vscode-isolate.sh myproject status
