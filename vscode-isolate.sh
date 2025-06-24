@@ -73,6 +73,8 @@ Security Testing Features:
 
 Security Testing Options:
     --security-test                  # Enable security testing mode (simple)
+    --extreme-test                   # Enable extreme testing mode (maximum spoofing)
+    --anti-detection                 # Enable anti-detection mode (bypass Augment licensing)
     --max-security                   # Enable security testing mode (compatibility)
     --desktop                        # Desktop integration (compatibility)
 
@@ -101,6 +103,17 @@ for arg in "$@"; do
     case $arg in
         --security-test)
             SECURITY_TEST_MODE="true"
+            shift
+            ;;
+        --extreme-test)
+            SECURITY_TEST_MODE="true"
+            EXTREME_TEST_MODE="true"
+            shift
+            ;;
+        --anti-detection)
+            SECURITY_TEST_MODE="true"
+            EXTREME_TEST_MODE="true"
+            ANTI_DETECTION_MODE="true"
             shift
             ;;
         --max-security)
@@ -317,20 +330,29 @@ check_platform_and_namespace_support() {
 # Security Testing Functions
 generate_fake_machine_id() {
     local profile_name="$1"
-    # Generate consistent but unique machine ID for this profile
-    echo "security-test-$(echo "$profile_name" | shasum -a 256 | cut -c1-32)"
+    # Generate realistic machine ID that looks like VS Code's format
+    # VS Code uses UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    local hash=$(echo "$profile_name$(date +%s)$RANDOM" | shasum -a 256 | cut -c1-32)
+    echo "${hash:0:8}-${hash:8:4}-4${hash:12:3}-a${hash:15:3}-${hash:18:12}"
 }
 
 generate_fake_hostname() {
     local profile_name="$1"
-    echo "vscode-test-$(echo "$profile_name" | shasum -a 256 | cut -c1-8)"
+    # Generate realistic hostname that doesn't look like testing
+    local names=("MacBook-Pro" "MacBook-Air" "iMac" "Mac-mini" "MacBook")
+    local name=${names[$(($(echo "$profile_name" | wc -c) % ${#names[@]}))]}
+    local suffix=$(echo "$profile_name" | shasum -a 256 | cut -c1-4)
+    echo "$name-$suffix.local"
 }
 
 generate_fake_mac_address() {
     local profile_name="$1"
-    # Generate a fake but consistent MAC address for this profile
-    local hash=$(echo "$profile_name" | shasum -a 256 | cut -c1-12)
-    echo "${hash:0:2}:${hash:2:2}:${hash:4:2}:${hash:6:2}:${hash:8:2}:${hash:10:2}"
+    # Generate realistic MAC address with proper vendor prefix
+    # Use Apple's OUI (Organizationally Unique Identifier)
+    local apple_ouis=("00:1B:63" "00:1F:F3" "00:23:DF" "00:25:00" "28:CF:E9" "3C:07:54")
+    local oui=${apple_ouis[$(($(echo "$profile_name" | wc -c) % ${#apple_ouis[@]}))]}
+    local hash=$(echo "$profile_name$RANDOM" | shasum -a 256 | cut -c1-6)
+    echo "$oui:${hash:0:2}:${hash:2:2}:${hash:4:2}"
 }
 
 setup_security_test_environment() {
@@ -351,13 +373,24 @@ setup_security_test_environment() {
     local fake_mac=$(generate_fake_mac_address "$profile_name")
 
     # Store fake identifiers for this profile
+    local fake_timestamp=$(($(date +%s) - (RANDOM % 86400 * 30))) # Random time in last 30 days
+    local fake_serial="C02$(echo "$profile_name" | shasum -a 256 | cut -c1-8 | tr '[:lower:]' '[:upper:]')"
+    local fake_uuid=$(uuidgen 2>/dev/null || echo "$fake_machine_id")
+
     cat > "$PROFILE_SYSTEM_CONFIG/identifiers.env" << EOF
-# Security Testing Identifiers for Profile: $profile_name
+# Anti-Detection Identifiers for Profile: $profile_name
 export FAKE_MACHINE_ID="$fake_machine_id"
 export FAKE_HOSTNAME="$fake_hostname"
 export FAKE_MAC_ADDRESS="$fake_mac"
-export FAKE_USER_ID="test-user-$(date +%s)"
-export FAKE_SESSION_ID="session-$(uuidgen 2>/dev/null || echo "$(date +%s)-$$")"
+export FAKE_USER_ID="$(whoami)-$fake_timestamp"
+export FAKE_SESSION_ID="$(uuidgen 2>/dev/null || echo "$fake_timestamp-$$")"
+export FAKE_INSTALL_TIME="$fake_timestamp"
+export FAKE_FIRST_RUN_TIME="$fake_timestamp"
+export FAKE_BOOT_TIME="$((fake_timestamp - 3600))"
+export FAKE_SERIAL_NUMBER="$fake_serial"
+export FAKE_HARDWARE_UUID="$fake_uuid"
+export FAKE_PLATFORM_UUID="$(uuidgen 2>/dev/null || echo "$fake_machine_id")"
+export FAKE_BOARD_ID="Mac-$(echo "$profile_name" | shasum -a 256 | cut -c1-16 | tr '[:lower:]' '[:upper:]')"
 EOF
 
     log_success "Security testing identifiers generated for '$profile_name'"
@@ -623,14 +656,165 @@ setup_security_environment() {
     export TMP="$PROFILE_TMP"
     export TEMP="$PROFILE_TMP"
 
+    # Extreme testing mode - additional spoofing
+    if [[ "\${EXTREME_TEST_MODE:-false}" == "true" ]]; then
+        # Spoof additional system paths that extensions might check
+        export USER="\$FAKE_USER_ID"
+        export LOGNAME="\$FAKE_USER_ID"
+        export USERNAME="\$FAKE_USER_ID"
+
+        # Spoof system information commands (if extension shells out)
+        export PATH="\$PROFILE_SYSTEM_CONFIG/bin:\$PATH"
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/bin"
+
+        # Create comprehensive system command interception for macOS
+        if [[ "\$(uname)" == "Darwin" ]]; then
+            # Fake system_profiler command
+            cat > "\$PROFILE_SYSTEM_CONFIG/bin/system_profiler" << 'SYSPROF'
+#!/bin/bash
+case "\$1" in
+    "SPHardwareDataType")
+        cat "\$PROFILE_SYSTEM_CONFIG/fake_hardware_info.txt" 2>/dev/null || echo "Hardware UUID: \$FAKE_MACHINE_ID"
+        ;;
+    "SPNetworkDataType")
+        cat "\$PROFILE_SYSTEM_CONFIG/network/system_profiler_network.txt" 2>/dev/null || echo "Ethernet Address: \$FAKE_MAC_ADDRESS"
+        ;;
+    *)
+        /usr/sbin/system_profiler "\$@"
+        ;;
+esac
+SYSPROF
+            chmod +x "\$PROFILE_SYSTEM_CONFIG/bin/system_profiler"
+
+            # Fake ioreg command (hardware registry)
+            cat > "\$PROFILE_SYSTEM_CONFIG/bin/ioreg" << 'IOREG'
+#!/bin/bash
+case "\$*" in
+    *"IOPlatformUUID"*)
+        echo "    \"IOPlatformUUID\" = \"\$FAKE_HARDWARE_UUID\""
+        ;;
+    *"IOPlatformSerialNumber"*)
+        echo "    \"IOPlatformSerialNumber\" = \"\$FAKE_SERIAL_NUMBER\""
+        ;;
+    *"board-id"*)
+        echo "    \"board-id\" = <\"\$FAKE_BOARD_ID\">"
+        ;;
+    *)
+        /usr/sbin/ioreg "\$@" 2>/dev/null | sed "s/[A-F0-9]\{8\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{12\}/\$FAKE_MACHINE_ID/g"
+        ;;
+esac
+IOREG
+            chmod +x "\$PROFILE_SYSTEM_CONFIG/bin/ioreg"
+
+            # Fake sysctl command (system control)
+            cat > "\$PROFILE_SYSTEM_CONFIG/bin/sysctl" << 'SYSCTL'
+#!/bin/bash
+case "\$*" in
+    *"kern.uuid"*)
+        echo "kern.uuid: \$FAKE_HARDWARE_UUID"
+        ;;
+    *"machdep.cpu.brand_string"*)
+        echo "machdep.cpu.brand_string: Apple M\$((\$\$ % 3 + 1)) Pro"
+        ;;
+    *"hw.memsize"*)
+        echo "hw.memsize: \$((\$\$ % 32 + 16))000000000"
+        ;;
+    *)
+        /usr/sbin/sysctl "\$@"
+        ;;
+esac
+SYSCTL
+            chmod +x "\$PROFILE_SYSTEM_CONFIG/bin/sysctl"
+
+            # Fake hostname command
+            cat > "\$PROFILE_SYSTEM_CONFIG/bin/hostname" << 'HOSTNAME'
+#!/bin/bash
+echo "\$FAKE_HOSTNAME"
+HOSTNAME
+            chmod +x "\$PROFILE_SYSTEM_CONFIG/bin/hostname"
+
+            # Fake ifconfig command
+            cat > "\$PROFILE_SYSTEM_CONFIG/bin/ifconfig" << 'IFCONFIG'
+#!/bin/bash
+if [[ "\$1" == "en0" ]] || [[ "\$*" == *"ether"* ]]; then
+    echo "en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500"
+    echo "    ether \$FAKE_MAC_ADDRESS"
+    echo "    inet 192.168.1.\$((\$\$ % 255)) netmask 0xffffff00 broadcast 192.168.1.255"
+    echo "    media: autoselect"
+    echo "    status: active"
+else
+    /sbin/ifconfig "\$@"
+fi
+IFCONFIG
+            chmod +x "\$PROFILE_SYSTEM_CONFIG/bin/ifconfig"
+        fi
+
+        echo "🔥 EXTREME TESTING MODE: Maximum spoofing enabled"
+    fi
+
     # Browser cache isolation (if extensions use browser data)
     export CHROME_USER_DATA_DIR="$PROFILE_SYSTEM_CACHE/chrome"
     export MOZILLA_PROFILE_DIR="$PROFILE_SYSTEM_CACHE/mozilla"
     export SAFARI_CACHE_DIR="$PROFILE_SYSTEM_CACHE/safari"
 
+    # VS Code and Augment-specific environment spoofing
+    export VSCODE_MACHINE_ID="\$FAKE_MACHINE_ID"
+    export VSCODE_SESSION_ID="\$FAKE_SESSION_ID"
+    export VSCODE_INSTANCE_ID="\$FAKE_SESSION_ID"
+    export VSCODE_PID="\$\$"
+    export VSCODE_CWD="\$PROFILE_PROJECTS"
+    export VSCODE_LOGS="\$PROFILE_SYSTEM_CACHE/logs"
+
+    # Augment extension specific spoofing
+    export AUGMENT_MACHINE_ID="\$FAKE_MACHINE_ID"
+    export AUGMENT_DEVICE_ID="\$FAKE_MACHINE_ID"
+    export AUGMENT_USER_ID="\$FAKE_USER_ID"
+    export AUGMENT_SESSION_ID="\$FAKE_SESSION_ID"
+    export AUGMENT_INSTALL_ID="\$FAKE_MACHINE_ID"
+    export AUGMENT_CLIENT_ID="\$FAKE_MACHINE_ID"
+
+    # Node.js environment spoofing (for extension runtime)
+    export NODE_UNIQUE_ID="\$FAKE_MACHINE_ID"
+    export HOSTNAME="\$FAKE_HOSTNAME"
+    export COMPUTERNAME="\$FAKE_HOSTNAME"
+    export HOST="\$FAKE_HOSTNAME"
+
+    # macOS specific environment spoofing
+    if [[ "\$(uname)" == "Darwin" ]]; then
+        export __CF_USER_TEXT_ENCODING="0x1F5:\$(echo \$FAKE_USER_ID | od -An -tx1 | tr -d ' \n' | cut -c1-8):0x0"
+        export SECURITYSESSIONID="\$((\$\$ % 100000 + 100000))"
+    fi
+
     # Network identifier spoofing (environment level)
     export FAKE_NETWORK_INTERFACE="en\${FAKE_MAC_ADDRESS//:/}"
     export FAKE_IP_ADDRESS="192.168.\$((\$\$ % 255)).\$((\$\$ % 255))"
+
+    # Advanced network spoofing for macOS
+    if [[ "\$(uname)" == "Darwin" ]]; then
+        # Create fake network interface info
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/network"
+        cat > "\$PROFILE_SYSTEM_CONFIG/network/interfaces" << NETINFO
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+    ether \$FAKE_MAC_ADDRESS
+    inet \$FAKE_IP_ADDRESS netmask 0xffffff00 broadcast 192.168.1.255
+    media: autoselect
+    status: active
+NETINFO
+
+        # Fake system_profiler network data
+        cat > "\$PROFILE_SYSTEM_CONFIG/network/system_profiler_network.txt" << SYSNET
+Network:
+    Ethernet:
+        Type: Ethernet
+        Hardware: Ethernet
+        BSD Device Name: en0
+        Has IP Assigned: Yes
+        IP Address: \$FAKE_IP_ADDRESS
+        Subnet Mask: 255.255.255.0
+        Router: 192.168.1.1
+        Ethernet Address: \$FAKE_MAC_ADDRESS
+SYSNET
+    fi
 
     # Create necessary directories
     mkdir -p "\$XDG_CONFIG_HOME" "\$XDG_CACHE_HOME" "\$XDG_DATA_HOME" "\$XDG_STATE_HOME" "\$XDG_RUNTIME_DIR"
@@ -645,7 +829,7 @@ setup_security_environment() {
             sudo scutil --set HostName "\$FAKE_HOSTNAME" 2>/dev/null || echo "⚠️ Hostname change requires admin privileges"
         fi
 
-        # Create fake system info files
+        # Create comprehensive fake system info files
         cat > "\$PROFILE_SYSTEM_CONFIG/fake_system_info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -655,11 +839,190 @@ setup_security_environment() {
     <string>\$FAKE_MACHINE_ID</string>
     <key>FakeSerialNumber</key>
     <string>TEST\${FAKE_MACHINE_ID:0:8}</string>
+    <key>FakePlatformUUID</key>
+    <string>\$(uuidgen 2>/dev/null || echo "\$FAKE_MACHINE_ID")</string>
     <key>TestingMode</key>
     <true/>
 </dict>
 </plist>
 PLIST
+
+        # Create fake hardware info that extensions might check
+        cat > "\$PROFILE_SYSTEM_CONFIG/fake_hardware_info.txt" << HWINFO
+Hardware Overview:
+  Model Name: MacBook Pro (Testing)
+  Model Identifier: MacBookPro18,\$((\$\$ % 4 + 1))
+  Chip: Apple M\$((\$\$ % 3 + 1)) Pro
+  Total Number of Cores: \$((\$\$ % 4 + 8))
+  Memory: \$((\$\$ % 32 + 16)) GB
+  System Firmware Version: 8419.80.7 (Testing)
+  Serial Number (system): TEST\${FAKE_MACHINE_ID:0:8}
+  Hardware UUID: \$FAKE_MACHINE_ID
+HWINFO
+
+        # Create fake disk info
+        cat > "\$PROFILE_SYSTEM_CONFIG/fake_disk_info.txt" << DISKINFO
+Disk Utility Info:
+  Device: disk0
+  Media Name: Apple SSD (Testing)
+  Media Type: SSD
+  Connection: Internal
+  Partition Map: GPT
+  S.M.A.R.T. Status: Verified
+  Disk Size: \$((\$\$ % 512 + 256)) GB
+  Device / Media Name: disk0 / TEST_SSD_\${FAKE_MACHINE_ID:0:8}
+  Volume UUID: \$(uuidgen 2>/dev/null || echo "\$FAKE_MACHINE_ID")
+DISKINFO
+
+        # Create comprehensive VS Code identity spoofing
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/Code/User"
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/Code/CachedExtensions"
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/Code/logs"
+
+        # VS Code machine ID (critical for Augment detection)
+        echo "\$FAKE_MACHINE_ID" > "\$PROFILE_SYSTEM_CONFIG/Code/User/machineid"
+
+        # VS Code session storage
+        cat > "\$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/storage.json" << VSCODE_STORAGE
+{
+    "machineId": "\$FAKE_MACHINE_ID",
+    "sessionId": "\$FAKE_SESSION_ID",
+    "sqmId": "\$FAKE_MACHINE_ID",
+    "devDeviceId": "\$FAKE_MACHINE_ID",
+    "firstSessionDate": "\$(date -r \$FAKE_INSTALL_TIME -Iseconds 2>/dev/null || date -Iseconds)",
+    "lastSessionDate": "\$(date -Iseconds)",
+    "isNewSession": false
+}
+VSCODE_STORAGE
+
+        # VS Code telemetry settings
+        cat > "\$PROFILE_SYSTEM_CONFIG/Code/User/settings.json" << SETTINGS
+{
+    "telemetry.telemetryLevel": "off",
+    "telemetry.enableCrashReporter": false,
+    "telemetry.enableTelemetry": false,
+    "workbench.enableExperiments": false,
+    "extensions.autoCheckUpdates": false,
+    "extensions.autoUpdate": false,
+    "update.mode": "none",
+    "machineId": "\$FAKE_MACHINE_ID"
+}
+SETTINGS
+
+        # Comprehensive Augment extension spoofing
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/augment.vscode-augment"
+
+        # Main Augment storage
+        cat > "\$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/augment.vscode-augment/storage.json" << AUGMENT_STORAGE
+{
+    "machineId": "\$FAKE_MACHINE_ID",
+    "deviceId": "\$FAKE_MACHINE_ID",
+    "hardwareId": "\$FAKE_HARDWARE_UUID",
+    "platformId": "\$FAKE_PLATFORM_UUID",
+    "userId": "\$FAKE_USER_ID",
+    "sessionId": "\$FAKE_SESSION_ID",
+    "installId": "\$FAKE_MACHINE_ID",
+    "clientId": "\$FAKE_MACHINE_ID",
+    "instanceId": "\$FAKE_SESSION_ID",
+    "firstInstall": \$FAKE_INSTALL_TIME,
+    "lastSeen": \$(date +%s),
+    "version": "1.0.0",
+    "os": "darwin",
+    "arch": "arm64",
+    "hostname": "\$FAKE_HOSTNAME",
+    "serialNumber": "\$FAKE_SERIAL_NUMBER",
+    "boardId": "\$FAKE_BOARD_ID"
+}
+AUGMENT_STORAGE
+
+        # Augment license storage (if exists)
+        cat > "\$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/augment.vscode-augment/license.json" << AUGMENT_LICENSE
+{
+    "machineId": "\$FAKE_MACHINE_ID",
+    "deviceFingerprint": "\$FAKE_MACHINE_ID",
+    "hardwareFingerprint": "\$FAKE_HARDWARE_UUID",
+    "installationId": "\$FAKE_MACHINE_ID",
+    "activationTime": \$FAKE_INSTALL_TIME,
+    "lastValidation": \$(date +%s)
+}
+AUGMENT_LICENSE
+
+        # Augment workspace storage
+        mkdir -p "\$PROFILE_PROJECTS/.vscode"
+        cat > "\$PROFILE_PROJECTS/.vscode/settings.json" << WORKSPACE_SETTINGS
+{
+    "augment.machineId": "\$FAKE_MACHINE_ID",
+    "augment.deviceId": "\$FAKE_MACHINE_ID",
+    "augment.sessionId": "\$FAKE_SESSION_ID"
+}
+WORKSPACE_SETTINGS
+
+        # Create Node.js module interception for extensions
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/node_modules/os"
+        cat > "\$PROFILE_SYSTEM_CONFIG/node_modules/os/index.js" << NODEJS_OS
+const originalOs = require.cache[require.resolve('os')] ? require.cache[require.resolve('os')].exports : require('os');
+
+// Override os module methods that extensions use for fingerprinting
+module.exports = {
+    ...originalOs,
+    hostname: () => process.env.FAKE_HOSTNAME || originalOs.hostname(),
+    userInfo: (options) => ({
+        ...originalOs.userInfo(options),
+        username: process.env.FAKE_USER_ID || originalOs.userInfo(options).username,
+        uid: parseInt(process.env.FAKE_USER_ID?.split('-')[1]) || originalOs.userInfo(options).uid
+    }),
+    networkInterfaces: () => {
+        const interfaces = originalOs.networkInterfaces();
+        if (process.env.FAKE_MAC_ADDRESS && interfaces.en0) {
+            interfaces.en0 = interfaces.en0.map(iface => ({
+                ...iface,
+                mac: process.env.FAKE_MAC_ADDRESS
+            }));
+        }
+        return interfaces;
+    },
+    cpus: () => {
+        const cpus = originalOs.cpus();
+        return cpus.map(cpu => ({
+            ...cpu,
+            model: process.env.FAKE_CPU_MODEL || cpu.model
+        }));
+    }
+};
+NODEJS_OS
+
+        # Create crypto module interception for machine ID generation
+        mkdir -p "\$PROFILE_SYSTEM_CONFIG/node_modules/crypto"
+        cat > "\$PROFILE_SYSTEM_CONFIG/node_modules/crypto/index.js" << NODEJS_CRYPTO
+const originalCrypto = require.cache[require.resolve('crypto')] ? require.cache[require.resolve('crypto')].exports : require('crypto');
+
+module.exports = {
+    ...originalCrypto,
+    createHash: (algorithm) => {
+        const hash = originalCrypto.createHash(algorithm);
+        const originalUpdate = hash.update.bind(hash);
+        const originalDigest = hash.digest.bind(hash);
+
+        hash.update = function(data, encoding) {
+            // Intercept common hardware fingerprinting patterns
+            if (typeof data === 'string') {
+                if (data.includes('Hardware UUID') || data.includes('IOPlatformUUID')) {
+                    data = data.replace(/[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}/gi, process.env.FAKE_MACHINE_ID);
+                }
+                if (data.includes('Serial Number') || data.includes('IOPlatformSerialNumber')) {
+                    data = data.replace(/[A-Z0-9]{10,}/g, process.env.FAKE_SERIAL_NUMBER);
+                }
+            }
+            return originalUpdate(data, encoding);
+        };
+
+        return hash;
+    }
+};
+NODEJS_CRYPTO
+
+        # Set NODE_PATH to include our intercepted modules
+        export NODE_PATH="\$PROFILE_SYSTEM_CONFIG/node_modules:\$NODE_PATH"
     fi
 }
 
