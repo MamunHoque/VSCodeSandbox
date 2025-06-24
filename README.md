@@ -104,7 +104,10 @@ The enhanced `vscode-isolate.sh` script automatically:
 # Create isolated profile (automatic platform detection)
 ./vscode-isolate.sh myproject create
 
-# Create security testing profile (with fake identifiers)
+# Create security testing profile (with fake identifiers) - SIMPLE WAY
+./vscode-isolate.sh test-profile create --security-test
+
+# Alternative: using environment variable
 VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test-profile create
 
 # Launch isolated VS Code
@@ -191,9 +194,12 @@ The script automatically chooses the best isolation level:
 
 ### **🧪 Security Testing Mode**
 ```bash
-# Enable security testing mode
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test1 create
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test2 create
+# Enable security testing mode (SIMPLE WAY)
+./vscode-isolate.sh test1 create --security-test
+./vscode-isolate.sh test2 create --security-test
+
+# Alternative: using environment variable
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test3 create
 
 # Each profile gets unique identifiers:
 # - Fake Machine ID: security-test-abc123...
@@ -210,9 +216,12 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test2 create
 
 ### **🔧 Security Testing Use Cases**
 ```bash
-# Test VS Code extension licensing systems
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-1 create
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-2 create
+# Test VS Code extension licensing systems (SIMPLE WAY)
+./vscode-isolate.sh bypass-test-1 create --security-test
+./vscode-isolate.sh bypass-test-2 create --security-test
+
+# Alternative: using environment variable
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-3 create
 
 # Each profile simulates a different machine for testing:
 # - Different machine IDs for trial reset testing
@@ -252,10 +261,13 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-2 create
 Test your VS Code extension's licensing system for potential bypass vulnerabilities:
 
 ```bash
-# Create multiple security test profiles
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-1 create
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-2 create
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-3 create
+# Create multiple security test profiles (SIMPLE WAY)
+./vscode-isolate.sh license-test-1 create --security-test
+./vscode-isolate.sh license-test-2 create --security-test
+./vscode-isolate.sh license-test-3 create --security-test
+
+# Alternative: using environment variable
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-4 create
 
 # Each profile gets unique fake identifiers:
 # - Machine ID: security-test-abc123def456...
@@ -276,8 +288,8 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-3 create
 # Scenario 1: Test trial reset prevention
 # 1. Install your extension in normal VS Code
 # 2. Start trial period
-# 3. Create security test profile
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh trial-test create
+# 3. Create security test profile (SIMPLE WAY)
+./vscode-isolate.sh trial-test create --security-test
 # 4. Check if trial resets in isolated environment
 
 # Scenario 2: Test multiple machine detection
@@ -289,6 +301,39 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh trial-test create
 # 1. Rapidly create multiple security test profiles
 # 2. Check if your licensing server detects suspicious patterns
 # 3. Verify rate limiting and abuse prevention
+```
+
+### **Setup Information Display**
+After creating any profile, you'll see detailed setup information:
+
+**Security Testing Mode:**
+```
+📋 Current Setup Information:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 Security Testing Mode: ENABLED
+
+Each profile gets unique fake system identifiers:
+  🔹 Machine ID spoofing: security-test-ef0020d0b6afd90ac9aa3e70b9ceff55
+  🔹 Hostname spoofing: vscode-test-ef0020d0
+  🔹 MAC address spoofing: ef:00:20:d0:b6:af
+
+Additional Security Features:
+  🔹 System cache isolation: Complete XDG directory separation
+  🔹 Browser data isolation: Chrome, Firefox, Safari data separated
+  🔹 Environment spoofing: Fake user/session IDs
+  🔹 Network simulation: Simulated network interface data
+```
+
+**Standard Mode:**
+```
+📋 Current Setup Information:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 Standard Isolation Mode: ENABLED
+
+Standard isolation features:
+  🔹 VS Code data isolation: Separate extensions, settings, workspace
+  🔹 Environment isolation: Separate configuration directories
+  🔹 Project isolation: Dedicated projects directory
 ```
 
 ### **Security Testing Best Practices**

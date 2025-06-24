@@ -68,6 +68,11 @@ Security Testing Features:
     🔧 Network interface simulation  # Different network fingerprints per profile
     🔧 Hostname modification         # Unique hostnames for testing
 
+Security Testing Options:
+    --security-test                  # Enable security testing mode (simple)
+    --max-security                   # Enable security testing mode (compatibility)
+    --desktop                        # Desktop integration (compatibility)
+
 Repository: https://github.com/MamunHoque/VSCodeSandbox
 EOF
         exit 0
@@ -78,6 +83,25 @@ esac
 ISOLATION_ROOT="${VSCODE_ISOLATION_ROOT:-$HOME/.vscode-isolated}"
 PROFILE_NAME="${1:-}"
 COMMAND="${2:-create}"
+
+# Parse command line arguments for security testing flag
+for arg in "$@"; do
+    case $arg in
+        --security-test)
+            SECURITY_TEST_MODE="true"
+            shift
+            ;;
+        --max-security)
+            # Keep for compatibility but enable security testing
+            SECURITY_TEST_MODE="true"
+            shift
+            ;;
+        --desktop)
+            # Keep for compatibility
+            shift
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -128,10 +152,11 @@ Examples:
     $0 "" list                     # List all profiles
 
 Security Testing Examples:
-    VSCODE_SECURITY_TEST=true $0 test1 create    # Create profile with fake identifiers
-    VSCODE_SECURITY_TEST=true $0 test2 create    # Create another profile with different fake identifiers
-    $0 test1 launch                              # Launch with spoofed system info
-    $0 test2 launch                              # Launch with different spoofed system info
+    $0 test1 create --security-test             # Create profile with fake identifiers (simple)
+    $0 test2 create --security-test             # Create another profile with different fake identifiers
+    VSCODE_SECURITY_TEST=true $0 test3 create   # Alternative: using environment variable
+    $0 test1 launch                             # Launch with spoofed system info
+    $0 test2 launch                             # Launch with different spoofed system info
 
 URI Support:
     $0 myproject launch "vscode://file/path/to/file.js"     # Open specific file
@@ -340,6 +365,63 @@ EOF
     log_info "Fake Machine ID: $fake_machine_id"
     log_info "Fake Hostname: $fake_hostname"
     log_info "Fake MAC Address: $fake_mac"
+
+    # Store identifiers for display later
+    echo "$fake_machine_id" > "$PROFILE_SYSTEM_CONFIG/machine_id.txt"
+    echo "$fake_hostname" > "$PROFILE_SYSTEM_CONFIG/hostname.txt"
+    echo "$fake_mac" > "$PROFILE_SYSTEM_CONFIG/mac_address.txt"
+}
+
+# Display current setup information
+display_setup_information() {
+    local profile_name="$1"
+
+    echo
+    echo -e "${BLUE}📋 Current Setup Information:${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        echo -e "${YELLOW}🔧 Security Testing Mode: ENABLED${NC}"
+        echo
+        echo -e "${GREEN}Each profile gets unique fake system identifiers:${NC}"
+
+        if [[ -f "$PROFILE_SYSTEM_CONFIG/machine_id.txt" ]]; then
+            local machine_id=$(cat "$PROFILE_SYSTEM_CONFIG/machine_id.txt")
+            local hostname=$(cat "$PROFILE_SYSTEM_CONFIG/hostname.txt")
+            local mac_address=$(cat "$PROFILE_SYSTEM_CONFIG/mac_address.txt")
+
+            echo -e "  ${BLUE}🔹 Machine ID spoofing:${NC} $machine_id"
+            echo -e "  ${BLUE}🔹 Hostname spoofing:${NC} $hostname"
+            echo -e "  ${BLUE}🔹 MAC address spoofing:${NC} $mac_address"
+        fi
+
+        echo
+        echo -e "${GREEN}Additional Security Features:${NC}"
+        echo -e "  ${BLUE}🔹 System cache isolation:${NC} Complete XDG directory separation"
+        echo -e "  ${BLUE}🔹 Browser data isolation:${NC} Chrome, Firefox, Safari data separated"
+        echo -e "  ${BLUE}🔹 Environment spoofing:${NC} Fake user/session IDs"
+        echo -e "  ${BLUE}🔹 Network simulation:${NC} Simulated network interface data"
+
+    else
+        echo -e "${GREEN}🔒 Standard Isolation Mode: ENABLED${NC}"
+        echo
+        echo -e "${GREEN}Standard isolation features:${NC}"
+        echo -e "  ${BLUE}🔹 VS Code data isolation:${NC} Separate extensions, settings, workspace"
+        echo -e "  ${BLUE}🔹 Environment isolation:${NC} Separate configuration directories"
+        echo -e "  ${BLUE}🔹 Project isolation:${NC} Dedicated projects directory"
+
+        if [[ "$(uname)" == "Linux" ]]; then
+            echo -e "  ${BLUE}🔹 Namespace isolation:${NC} Process and mount separation (Linux)"
+        fi
+    fi
+
+    echo
+    echo -e "${GREEN}Profile Information:${NC}"
+    echo -e "  ${BLUE}🔹 Profile Name:${NC} $profile_name"
+    echo -e "  ${BLUE}🔹 Platform:${NC} $(uname)"
+    echo -e "  ${BLUE}🔹 Profile Root:${NC} $PROFILE_ROOT"
+    echo -e "  ${BLUE}🔹 Projects Directory:${NC} $PROFILE_PROJECTS"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
 # Create isolated directory structure
@@ -974,6 +1056,10 @@ create_profile() {
     install_extensions
 
     log_success "Profile '$PROFILE_NAME' created successfully!"
+
+    # Display current setup information
+    display_setup_information "$PROFILE_NAME"
+
     log_info "Launching isolated VS Code..."
 
     # Launch the profile
