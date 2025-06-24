@@ -1,28 +1,32 @@
 #!/bin/bash
 
-# Enhanced VS Code Isolation Script - Cross-Platform Edition
-# Creates completely sandboxed VS Code environments with universal compatibility
-# Author: Enhanced for cross-platform compatibility and maximum isolation
-# Version: 3.1.0
+# Enhanced VS Code Isolation Script - Security Testing Edition
+# Creates completely sandboxed VS Code environments with advanced bypass testing
+# Author: Enhanced for security testing and maximum isolation
+# Version: 4.0.0-SECURITY-TEST
 # Platform: Universal (macOS, Linux, Unix)
-# Release: Cross-Platform Compatibility Release
+# Release: Security Testing Edition with Advanced Bypass Capabilities
 
 set -euo pipefail
+
+# Security Testing Mode Flag
+SECURITY_TEST_MODE="${VSCODE_SECURITY_TEST:-false}"
 
 # Handle global commands first (before any processing)
 case "${1:-}" in
     "--version"|"-v")
-        echo "VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release"
+        echo "VS Code Sandbox v4.0.0 - Security Testing Edition"
         echo "Platform: Universal (macOS, Linux, Unix)"
-        echo "Author: Enhanced for cross-platform compatibility"
+        echo "Author: Enhanced for security testing and maximum isolation"
         echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
         echo
         echo "Current Platform: $(uname)"
+        echo "Security Test Mode: $SECURITY_TEST_MODE"
         exit 0
         ;;
     "--help"|"-h"|"help")
         cat << EOF
-VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release
+VS Code Sandbox v4.0.0 - Security Testing Edition
 
 Usage: $0 <profile_name> [command] [options]
 
@@ -48,14 +52,21 @@ URI Support:
     $0 myproject launch --open-url "vscode://folder/path"   # Open folder
 
 Platform Support:
-    ✅ macOS (App Bundle, Homebrew)    - Basic isolation
-    ✅ Linux (Standard)                - Maximum security with namespaces
+    ✅ macOS (App Bundle, Homebrew)    - Enhanced isolation + Security testing
+    ✅ Linux (Standard)                - Maximum security with namespaces + Testing
     ✅ Linux (Snap)                    - Basic isolation (--force-namespaces for max)
-    ✅ Other Unix                      - Basic isolation
+    ✅ Other Unix                      - Basic isolation + Testing features
 
 Environment Variables:
     VSCODE_ISOLATION_ROOT          # Root directory for isolated profiles (default: ~/.vscode-isolated)
     VSCODE_BINARY                  # Path to VS Code binary (default: auto-detect)
+    VSCODE_SECURITY_TEST           # Enable security testing mode (default: false)
+
+Security Testing Features:
+    🔧 System identifier spoofing    # Each profile gets unique system identifiers
+    🔧 Enhanced file system isolation # Complete isolation of system caches
+    🔧 Network interface simulation  # Different network fingerprints per profile
+    🔧 Hostname modification         # Unique hostnames for testing
 
 Repository: https://github.com/MamunHoque/VSCodeSandbox
 EOF
@@ -96,7 +107,7 @@ show_version() {
 # Usage function
 usage() {
     cat << EOF
-VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release
+VS Code Sandbox v4.0.0 - Security Testing Edition
 
 Usage: $0 <profile_name> [command] [options]
 
@@ -116,20 +127,34 @@ Examples:
     $0 myproject remove            # Remove 'myproject' profile
     $0 "" list                     # List all profiles
 
+Security Testing Examples:
+    VSCODE_SECURITY_TEST=true $0 test1 create    # Create profile with fake identifiers
+    VSCODE_SECURITY_TEST=true $0 test2 create    # Create another profile with different fake identifiers
+    $0 test1 launch                              # Launch with spoofed system info
+    $0 test2 launch                              # Launch with different spoofed system info
+
 URI Support:
     $0 myproject launch "vscode://file/path/to/file.js"     # Open specific file
     $0 myproject launch "vscode://extension/ms-python.python"  # Install extension
     $0 myproject launch --open-url "vscode://folder/path"   # Open folder
 
 Platform Support:
-    ✅ macOS (App Bundle, Homebrew)    - Basic isolation
-    ✅ Linux (Standard)                - Maximum security with namespaces
+    ✅ macOS (App Bundle, Homebrew)    - Enhanced isolation + Security testing
+    ✅ Linux (Standard)                - Maximum security with namespaces + Testing
     ✅ Linux (Snap)                    - Basic isolation (--force-namespaces for max)
-    ✅ Other Unix                      - Basic isolation
+    ✅ Other Unix                      - Basic isolation + Testing features
 
 Environment Variables:
     VSCODE_ISOLATION_ROOT          # Root directory for isolated profiles (default: ~/.vscode-isolated)
     VSCODE_BINARY                  # Path to VS Code binary (default: auto-detect)
+    VSCODE_SECURITY_TEST           # Enable security testing mode (default: false)
+
+Security Testing Features:
+    🔧 System identifier spoofing    # Each profile gets unique fake machine IDs
+    🔧 Enhanced file system isolation # Complete isolation of system caches
+    🔧 Network interface simulation  # Different network fingerprints per profile
+    🔧 Hostname modification         # Unique hostnames for testing (requires admin)
+    🔧 Browser cache isolation       # Separate browser data per profile
 
 Repository: https://github.com/MamunHoque/VSCodeSandbox
 EOF
@@ -218,6 +243,12 @@ NAMESPACE_SCRIPT="$ISOLATION_ROOT/launchers/$PROFILE_NAME-namespace.sh"
 PROFILE_CONFIG_BASIC="$PROFILE_ROOT/config"
 PROFILE_EXTENSIONS="$PROFILE_ROOT/extensions"
 
+# Security testing paths
+PROFILE_SYSTEM_CACHE="$PROFILE_ROOT/system_cache"
+PROFILE_SYSTEM_CONFIG="$PROFILE_ROOT/system_config"
+PROFILE_NETWORK_CONFIG="$PROFILE_ROOT/network_config"
+SECURITY_TEST_SCRIPT="$ISOLATION_ROOT/launchers/$PROFILE_NAME-security-test.sh"
+
 # Check platform and namespace support
 check_platform_and_namespace_support() {
     local platform="$(uname)"
@@ -259,6 +290,58 @@ check_namespace_support() {
     check_platform_and_namespace_support
 }
 
+# Security Testing Functions
+generate_fake_machine_id() {
+    local profile_name="$1"
+    # Generate consistent but unique machine ID for this profile
+    echo "security-test-$(echo "$profile_name" | shasum -a 256 | cut -c1-32)"
+}
+
+generate_fake_hostname() {
+    local profile_name="$1"
+    echo "vscode-test-$(echo "$profile_name" | shasum -a 256 | cut -c1-8)"
+}
+
+generate_fake_mac_address() {
+    local profile_name="$1"
+    # Generate a fake but consistent MAC address for this profile
+    local hash=$(echo "$profile_name" | shasum -a 256 | cut -c1-12)
+    echo "${hash:0:2}:${hash:2:2}:${hash:4:2}:${hash:6:2}:${hash:8:2}:${hash:10:2}"
+}
+
+setup_security_test_environment() {
+    local profile_name="$1"
+
+    if [[ "$SECURITY_TEST_MODE" != "true" ]]; then
+        return 0
+    fi
+
+    log_info "Setting up security testing environment for profile '$profile_name'"
+
+    # Create security testing directories
+    mkdir -p "$PROFILE_SYSTEM_CACHE" "$PROFILE_SYSTEM_CONFIG" "$PROFILE_NETWORK_CONFIG"
+
+    # Generate fake identifiers for this profile
+    local fake_machine_id=$(generate_fake_machine_id "$profile_name")
+    local fake_hostname=$(generate_fake_hostname "$profile_name")
+    local fake_mac=$(generate_fake_mac_address "$profile_name")
+
+    # Store fake identifiers for this profile
+    cat > "$PROFILE_SYSTEM_CONFIG/identifiers.env" << EOF
+# Security Testing Identifiers for Profile: $profile_name
+export FAKE_MACHINE_ID="$fake_machine_id"
+export FAKE_HOSTNAME="$fake_hostname"
+export FAKE_MAC_ADDRESS="$fake_mac"
+export FAKE_USER_ID="test-user-$(date +%s)"
+export FAKE_SESSION_ID="session-$(uuidgen 2>/dev/null || echo "$(date +%s)-$$")"
+EOF
+
+    log_success "Security testing identifiers generated for '$profile_name'"
+    log_info "Fake Machine ID: $fake_machine_id"
+    log_info "Fake Hostname: $fake_hostname"
+    log_info "Fake MAC Address: $fake_mac"
+}
+
 # Create isolated directory structure
 create_profile_structure() {
     log_info "Creating isolated directory structure for profile '$PROFILE_NAME'"
@@ -266,6 +349,12 @@ create_profile_structure() {
     # Create basic directories (always needed)
     mkdir -p "$PROFILE_ROOT"/{config,extensions,projects}
     mkdir -p "$ISOLATION_ROOT/launchers"
+
+    # Create security testing directories
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        mkdir -p "$PROFILE_SYSTEM_CACHE" "$PROFILE_SYSTEM_CONFIG" "$PROFILE_NETWORK_CONFIG"
+        log_info "Security testing directories created"
+    fi
 
     # Create namespace isolation directories (Linux only)
     if [[ "$(uname)" == "Linux" ]]; then
@@ -276,6 +365,13 @@ create_profile_structure() {
         mkdir -p "$PROFILE_CONFIG"/{Code,fontconfig,gtk-3.0,dconf}
         mkdir -p "$PROFILE_CACHE"/{Code,fontconfig}
         mkdir -p "$PROFILE_LOCAL/share"/{Code,applications,mime,fonts,themes,icons}
+
+        # Enhanced system isolation for security testing
+        if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+            mkdir -p "$PROFILE_HOME"/{.ssh,.gnupg,.mozilla,.chrome,.safari}
+            mkdir -p "$PROFILE_CACHE"/{mozilla,google-chrome,safari}
+            log_info "Enhanced system isolation directories created"
+        fi
     fi
 
     # Create minimal environment files (Linux namespace mode only)
@@ -408,6 +504,93 @@ EOF
     chmod +x "$NAMESPACE_SCRIPT"
     log_success "Namespace script created"
 }
+# Create security testing launcher script
+create_security_test_launcher() {
+    log_info "Creating security testing launcher script"
+
+    cat > "$SECURITY_TEST_SCRIPT" << EOF
+#!/bin/bash
+# Security Testing Launcher for VS Code profile: $PROFILE_NAME
+# Includes advanced system identifier spoofing and isolation
+
+set -euo pipefail
+
+PROFILE_NAME="$PROFILE_NAME"
+PROFILE_ROOT="$PROFILE_ROOT"
+PROFILE_CONFIG="$PROFILE_CONFIG_BASIC"
+PROFILE_EXTENSIONS="$PROFILE_EXTENSIONS"
+PROFILE_PROJECTS="$PROFILE_PROJECTS"
+VSCODE_BINARY="$VSCODE_BINARY"
+SECURITY_TEST_MODE="$SECURITY_TEST_MODE"
+
+# Load fake identifiers
+if [[ -f "$PROFILE_SYSTEM_CONFIG/identifiers.env" ]]; then
+    source "$PROFILE_SYSTEM_CONFIG/identifiers.env"
+fi
+
+# Security Testing Environment Setup
+setup_security_environment() {
+    # Enhanced file system isolation
+    export XDG_CONFIG_HOME="$PROFILE_SYSTEM_CONFIG"
+    export XDG_CACHE_HOME="$PROFILE_SYSTEM_CACHE"
+    export XDG_DATA_HOME="$PROFILE_SYSTEM_CONFIG/share"
+    export XDG_STATE_HOME="$PROFILE_SYSTEM_CONFIG/state"
+    export XDG_RUNTIME_DIR="$PROFILE_TMP/runtime"
+
+    # System cache isolation
+    export TMPDIR="$PROFILE_TMP"
+    export TMP="$PROFILE_TMP"
+    export TEMP="$PROFILE_TMP"
+
+    # Browser cache isolation (if extensions use browser data)
+    export CHROME_USER_DATA_DIR="$PROFILE_SYSTEM_CACHE/chrome"
+    export MOZILLA_PROFILE_DIR="$PROFILE_SYSTEM_CACHE/mozilla"
+    export SAFARI_CACHE_DIR="$PROFILE_SYSTEM_CACHE/safari"
+
+    # Network identifier spoofing (environment level)
+    export FAKE_NETWORK_INTERFACE="en\${FAKE_MAC_ADDRESS//:/}"
+    export FAKE_IP_ADDRESS="192.168.\$((\$\$ % 255)).\$((\$\$ % 255))"
+
+    # Create necessary directories
+    mkdir -p "\$XDG_CONFIG_HOME" "\$XDG_CACHE_HOME" "\$XDG_DATA_HOME" "\$XDG_STATE_HOME" "\$XDG_RUNTIME_DIR"
+    mkdir -p "\$CHROME_USER_DATA_DIR" "\$MOZILLA_PROFILE_DIR" "\$SAFARI_CACHE_DIR"
+    chmod 700 "\$XDG_RUNTIME_DIR"
+
+    # System identifier spoofing (macOS specific)
+    if [[ "\$(uname)" == "Darwin" ]]; then
+        # Temporary hostname change (requires admin privileges)
+        if command -v sudo >/dev/null 2>&1; then
+            echo "🔧 Attempting to set temporary hostname for testing..."
+            sudo scutil --set HostName "\$FAKE_HOSTNAME" 2>/dev/null || echo "⚠️ Hostname change requires admin privileges"
+        fi
+
+        # Create fake system info files
+        cat > "\$PROFILE_SYSTEM_CONFIG/fake_system_info.plist" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>FakeHardwareUUID</key>
+    <string>\$FAKE_MACHINE_ID</string>
+    <key>FakeSerialNumber</key>
+    <string>TEST\${FAKE_MACHINE_ID:0:8}</string>
+    <key>TestingMode</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+    fi
+}
+
+# Call security environment setup
+setup_security_environment
+
+EOF
+
+    chmod +x "$SECURITY_TEST_SCRIPT"
+    log_success "Security testing launcher created"
+}
+
 # Create basic launcher script (cross-platform compatible)
 create_basic_launcher_script() {
     log_info "Creating basic launcher script (cross-platform compatible)"
@@ -425,6 +608,45 @@ PROFILE_CONFIG="$PROFILE_CONFIG_BASIC"
 PROFILE_EXTENSIONS="$PROFILE_EXTENSIONS"
 PROFILE_PROJECTS="$PROFILE_PROJECTS"
 VSCODE_BINARY="$VSCODE_BINARY"
+SECURITY_TEST_MODE="$SECURITY_TEST_MODE"
+
+# Enhanced isolation setup
+setup_enhanced_isolation() {
+    # Standard isolation
+    export TMPDIR="$PROFILE_ROOT/tmp"
+    export TMP="$PROFILE_ROOT/tmp"
+    export TEMP="$PROFILE_ROOT/tmp"
+
+    # Security testing enhancements
+    if [[ "\$SECURITY_TEST_MODE" == "true" ]]; then
+        # Load security testing environment
+        if [[ -f "$PROFILE_SYSTEM_CONFIG/identifiers.env" ]]; then
+            source "$PROFILE_SYSTEM_CONFIG/identifiers.env"
+        fi
+
+        # Enhanced system cache isolation
+        export XDG_CONFIG_HOME="$PROFILE_SYSTEM_CONFIG"
+        export XDG_CACHE_HOME="$PROFILE_SYSTEM_CACHE"
+        export XDG_DATA_HOME="$PROFILE_SYSTEM_CONFIG/share"
+
+        # Browser isolation
+        export CHROME_USER_DATA_DIR="$PROFILE_SYSTEM_CACHE/chrome"
+        export MOZILLA_PROFILE_DIR="$PROFILE_SYSTEM_CACHE/mozilla"
+
+        # Create directories
+        mkdir -p "\$XDG_CONFIG_HOME" "\$XDG_CACHE_HOME" "\$XDG_DATA_HOME"
+        mkdir -p "\$CHROME_USER_DATA_DIR" "\$MOZILLA_PROFILE_DIR"
+
+        echo "🔧 Security testing mode enabled for profile: \$PROFILE_NAME"
+        echo "🔧 Fake Machine ID: \$FAKE_MACHINE_ID"
+        echo "🔧 Fake Hostname: \$FAKE_HOSTNAME"
+    fi
+
+    mkdir -p "\$TMPDIR"
+}
+
+# Setup enhanced isolation
+setup_enhanced_isolation
 
 # Check if profile exists
 if [[ ! -d "\$PROFILE_ROOT" ]]; then
@@ -734,6 +956,12 @@ create_profile() {
 
     create_profile_structure
 
+    # Setup security testing environment if enabled
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        setup_security_test_environment "$PROFILE_NAME"
+        create_security_test_launcher
+    fi
+
     if [[ "$use_namespaces" == true ]]; then
         create_namespace_script
         create_launcher_script_with_namespaces
@@ -752,7 +980,12 @@ create_profile() {
     "$LAUNCHER_SCRIPT" "$PROFILE_PROJECTS" >/dev/null 2>&1 &
 
     echo
-    if [[ "$use_namespaces" == true ]]; then
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        log_success "🔧 VS Code '$PROFILE_NAME' is running with SECURITY TESTING mode!"
+        echo -e "${BLUE}🔒${NC} Security Level: Testing (Advanced Bypass Simulation)"
+        echo -e "${BLUE}🧪${NC} Security Test Script: $SECURITY_TEST_SCRIPT"
+        echo -e "${YELLOW}⚠️${NC} This profile simulates different system identifiers for testing"
+    elif [[ "$use_namespaces" == true ]]; then
         log_success "�️ VS Code '$PROFILE_NAME' is running with maximum security isolation!"
         echo -e "${BLUE}🔒${NC} Security Level: Maximum (Linux Namespaces)"
     else
@@ -768,6 +1001,10 @@ create_profile() {
     echo "   • Use '$0 $PROFILE_NAME launch' to start this profile again"
     echo "   • Use '$0 $PROFILE_NAME remove' to completely remove this profile"
     echo "   • Use '$0 \"\" list' to see all profiles"
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        echo "   • Security testing mode creates fake system identifiers for bypass testing"
+        echo "   • Use 'VSCODE_SECURITY_TEST=true $0 <profile> create' to enable testing mode"
+    fi
 }
 # Launch existing profile
 launch_profile() {

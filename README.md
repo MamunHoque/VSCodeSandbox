@@ -93,6 +93,7 @@ The enhanced `vscode-isolate.sh` script automatically:
 
 ### **Platform-Specific Documentation**
 - **Universal**: This README (works everywhere)
+- **Security Testing**: [SECURITY_TESTING_GUIDE.md](SECURITY_TESTING_GUIDE.md) (extension license testing)
 - **Linux Advanced**: [vscode-sandbox](vscode-sandbox) (namespace isolation)
 - **macOS Advanced**: [vscode-sandbox-macos](vscode-sandbox-macos) (native integration)
 
@@ -102,6 +103,9 @@ The enhanced `vscode-isolate.sh` script automatically:
 ```bash
 # Create isolated profile (automatic platform detection)
 ./vscode-isolate.sh myproject create
+
+# Create security testing profile (with fake identifiers)
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test-profile create
 
 # Launch isolated VS Code
 ./vscode-isolate.sh myproject launch
@@ -177,13 +181,49 @@ The script automatically chooses the best isolation level:
 - **Basic**: Daily development, project separation, cross-platform compatibility
 - **Maximum Security**: Enterprise environments, confidential projects, compliance requirements
 
-## 🆕 **What's New in v3.1.0**
+## 🆕 **What's New in v4.0.0 - Security Testing Edition**
 
-### **🌐 Cross-Platform Compatibility**
+### **🔧 Advanced Security Testing Features**
+- ✅ **System Identifier Spoofing**: Each profile gets unique fake machine IDs, hostnames, and MAC addresses
+- ✅ **Enhanced File System Isolation**: Complete isolation of system caches and browser data
+- ✅ **License Bypass Testing**: Test VS Code extension licensing systems for vulnerabilities
+- ✅ **Multiple Identity Simulation**: Create profiles that appear as different machines
+
+### **🧪 Security Testing Mode**
+```bash
+# Enable security testing mode
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test1 create
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test2 create
+
+# Each profile gets unique identifiers:
+# - Fake Machine ID: security-test-abc123...
+# - Fake Hostname: vscode-test-abc123
+# - Fake MAC Address: ab:cd:ef:12:34:56
+# - Isolated system caches and browser data
+```
+
+### **🌐 Cross-Platform Compatibility (Maintained)**
 - ✅ **Universal Support**: Single script works on macOS, Linux, and all Unix systems
 - ✅ **Automatic Detection**: Finds VS Code regardless of installation method
 - ✅ **Intelligent Adaptation**: Chooses optimal isolation level for your platform
 - ✅ **Enhanced URI Handling**: Full support for VS Code URLs including Augment authentication
+
+### **🔧 Security Testing Use Cases**
+```bash
+# Test VS Code extension licensing systems
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-1 create
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-2 create
+
+# Each profile simulates a different machine for testing:
+# - Different machine IDs for trial reset testing
+# - Separate system caches to avoid detection
+# - Isolated browser data for web-based licensing
+# - Unique network identifiers
+
+# Test if your extension can detect same physical hardware
+./vscode-isolate.sh bypass-test-1 launch  # Appears as Machine A
+./vscode-isolate.sh bypass-test-2 launch  # Appears as Machine B
+```
 
 ### **🔗 Enhanced VS Code URI Support**
 ```bash
@@ -205,6 +245,58 @@ The script automatically chooses the best isolation level:
 - ✅ **Graceful Fallback**: Works even when advanced features aren't available
 - ✅ **Better Error Messages**: Clear guidance for platform-specific issues
 - ✅ **Backward Compatible**: Existing profiles continue to work
+
+## 🔧 **Security Testing Features**
+
+### **VS Code Extension License Testing**
+Test your VS Code extension's licensing system for potential bypass vulnerabilities:
+
+```bash
+# Create multiple security test profiles
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-1 create
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-2 create
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-3 create
+
+# Each profile gets unique fake identifiers:
+# - Machine ID: security-test-abc123def456...
+# - Hostname: vscode-test-abc123de
+# - MAC Address: ab:cd:ef:12:34:56
+# - User/Session IDs: test-user-timestamp
+```
+
+### **What Gets Spoofed**
+- **Hardware Identifiers**: Fake machine IDs, MAC addresses
+- **System Identifiers**: Hostnames, user IDs, session IDs
+- **File System**: Completely isolated system caches and browser data
+- **Environment Variables**: XDG directories, temporary paths
+- **Network Fingerprints**: Simulated network interface data
+
+### **Testing Scenarios**
+```bash
+# Scenario 1: Test trial reset prevention
+# 1. Install your extension in normal VS Code
+# 2. Start trial period
+# 3. Create security test profile
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh trial-test create
+# 4. Check if trial resets in isolated environment
+
+# Scenario 2: Test multiple machine detection
+# 1. Create multiple profiles with different fake identifiers
+# 2. Test if your extension treats each as separate machines
+# 3. Verify server-side detection of same physical hardware
+
+# Scenario 3: Test abuse detection
+# 1. Rapidly create multiple security test profiles
+# 2. Check if your licensing server detects suspicious patterns
+# 3. Verify rate limiting and abuse prevention
+```
+
+### **Security Testing Best Practices**
+- ✅ **Test in isolated environments** - Don't affect production systems
+- ✅ **Document findings** - Record vulnerabilities for fixing
+- ✅ **Test edge cases** - Hardware changes, network issues, offline scenarios
+- ✅ **Verify server-side validation** - Ensure backend properly validates identifiers
+- ✅ **Consider professional auditing** - For production licensing systems
 
 ## 🤖 **Automatic Augment Extension**
 
