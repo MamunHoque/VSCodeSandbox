@@ -4,6 +4,16 @@
 
 VS Code Sandbox creates completely isolated VS Code environments that work seamlessly across macOS, Linux, and all VS Code installation types. Features intelligent platform detection, automatic Augment extension installation, and adaptive security levels from basic isolation to enterprise-grade security using Linux namespaces.
 
+## ⚡ **One-Line Installation**
+
+Get started instantly with a single command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh && chmod +x vscode-isolate.sh && ./vscode-isolate.sh myproject create
+```
+
+That's it! VS Code opens with complete isolation, pre-installed Augment extension, and full cross-platform compatibility.
+
 ## 🌟 **Key Features**
 
 - 🌐 **Universal Compatibility**: Works on macOS, Linux, and all VS Code installation types
@@ -12,50 +22,22 @@ VS Code Sandbox creates completely isolated VS Code environments that work seaml
 - 🤖 **Automatic Augment Extension**: AI-powered development assistance in every profile
 - 🔒 **Complete Isolation**: Zero interference between profiles or host system
 - 📦 **Cross-Platform Commands**: Unified interface across different operating systems
-- 🧪 **Well Tested**: Comprehensive validation ensures compatibility across platforms
+- 🧪 **Security Testing**: Advanced features for testing VS Code extension licensing systems
 - 🚀 **Simple Installation**: Single script works everywhere - just clone and run
 - 📱 **All VS Code Types**: Snap, Standard, Homebrew, App Bundle - all supported
 - 🔧 **Graceful Fallback**: Automatically adapts when advanced features aren't available
 - 🎯 **Backward Compatible**: Existing profiles continue to work without changes
 
-## ⚡ **Quick Start**
+## ⚡ **Alternative Installation Methods**
 
+### **Clone Repository (Recommended for Development)**
 ```bash
-# 1. Clone and run (works everywhere!)
-git clone https://github.com/MamunHoque/VSCodeSandbox.git
-cd VSCodeSandbox
-chmod +x vscode-isolate.sh
-
-# 2. Create your first isolated profile
-./vscode-isolate.sh myproject create
-
-# 3. That's it! VS Code opens with complete isolation
-# - Separate extensions, settings, and workspace
-# - Augment extension pre-installed
-# - Full VS Code URI support
-# - Works on macOS, Linux, and all VS Code types
-```
-
-## 🚀 **Installation Options**
-
-### **Universal Installation (Recommended)**
-Works on macOS, Linux, and all VS Code installation types:
-
-```bash
-# Clone and run - that's it!
+# Clone and run (works everywhere!)
 git clone https://github.com/MamunHoque/VSCodeSandbox.git
 cd VSCodeSandbox
 chmod +x vscode-isolate.sh
 
 # Create your first isolated profile
-./vscode-isolate.sh myproject create
-```
-
-### **One-Line Installation**
-```bash
-# Download and run directly
-curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh
-chmod +x vscode-isolate.sh
 ./vscode-isolate.sh myproject create
 ```
 
@@ -91,11 +73,12 @@ The enhanced `vscode-isolate.sh` script automatically:
 - 🛡️ **Chooses optimal isolation level** (Basic or Maximum Security)
 - 💬 **Provides clear feedback** about what isolation level you're getting
 
-### **Platform-Specific Documentation**
+### **Documentation**
 - **Universal**: This README (works everywhere)
-- **Security Testing**: [SECURITY_TESTING_GUIDE.md](SECURITY_TESTING_GUIDE.md) (extension license testing)
-- **Linux Advanced**: [vscode-sandbox](vscode-sandbox) (namespace isolation)
-- **macOS Advanced**: [vscode-sandbox-macos](vscode-sandbox-macos) (native integration)
+- **Security Testing**: [docs/SECURITY_TESTING_GUIDE.md](docs/SECURITY_TESTING_GUIDE.md) (extension license testing)
+- **macOS Guide**: [docs/README-macOS.md](docs/README-macOS.md) (macOS-specific features)
+- **Examples**: [docs/examples/](docs/examples/) (usage examples and patterns)
+- **Advanced Tools**: [vscode-profile-manager.sh](vscode-profile-manager.sh) (profile management utilities)
 
 ## 📋 **Usage**
 
@@ -131,16 +114,17 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test-profile create
 ./vscode-isolate.sh --help
 ```
 
-### **Platform-Specific Advanced Commands**
+### **Advanced Commands**
 ```bash
-# Linux: Maximum security with namespaces (when available)
-vscode-sandbox secure-project create --max-security --desktop
-
-# macOS: Native app bundle integration
-vscode-sandbox-macos myproject create
+# Security testing mode
+./vscode-isolate.sh test-profile create --security-test
 
 # Force namespace isolation (Linux with Snap VS Code)
 ./vscode-isolate.sh myproject create --force-namespaces
+
+# Profile management utilities
+./vscode-profile-manager.sh launch    # Interactive profile selector
+./vscode-profile-manager.sh compare   # Compare all profiles
 ```
 
 ## 🛡️ **Isolation Levels**

@@ -116,17 +116,7 @@ log_success() { echo -e "${GREEN}✅${NC} $1"; }
 log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 log_error() { echo -e "${RED}❌${NC} $1"; }
 
-# Show version information
-show_version() {
-    echo "VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release"
-    echo "Platform: Universal (macOS, Linux, Unix)"
-    echo "Author: Enhanced for cross-platform compatibility"
-    echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
-    echo
-    echo "Current Platform: $(uname)"
-    echo "VS Code Binary: ${VSCODE_BINARY:-Not detected}"
-    echo "Isolation Root: $ISOLATION_ROOT"
-}
+
 
 # Usage function
 usage() {
@@ -310,10 +300,7 @@ check_platform_and_namespace_support() {
     esac
 }
 
-# Legacy function for backward compatibility
-check_namespace_support() {
-    check_platform_and_namespace_support
-}
+
 
 # Security Testing Functions
 generate_fake_machine_id() {
