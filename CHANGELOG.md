@@ -5,6 +5,40 @@ All notable changes to VS Code Sandbox will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2024-06-24 - Cross-Platform Compatibility Release
+
+### 🌟 Added
+- **Cross-Platform Compatibility**: Native support for macOS, Linux, and all VS Code installation types
+- **Universal VS Code Detection**: Automatically detects VS Code installations across platforms
+- **Intelligent Platform Detection**: Adapts isolation method based on host operating system
+- **Enhanced URI Handling**: Full support for VS Code URIs including file, extension, and Augment URIs
+- **Version Command**: Added `--version` and `--help` commands for better user experience
+- **Graceful Fallback**: Falls back to basic isolation when advanced features aren't available
+
+### 🛡️ Enhanced
+- **Dual Isolation Modes**: Basic (universal) and Maximum Security (Linux namespaces)
+- **VS Code Detection**: Now supports App Bundle, Homebrew, Snap, and standard installations
+- **Error Handling**: Clear messages about isolation levels and platform-specific guidance
+- **URI Processing**: Smart handling of vscode://, file://, and direct path arguments
+
+### 🐛 Fixed
+- **macOS Compatibility**: Fixed VS Code detection and profile creation on macOS
+- **Profile Listing**: Fixed `find` command compatibility for non-GNU systems
+- **Process Detection**: Fixed process status display across different platforms
+- **Extension Installation**: Fixed extension installation in basic isolation mode
+- **Directory Structure**: Fixed cross-platform directory creation
+
+### 🔧 Technical
+- **Platform Detection**: Added automatic platform detection with appropriate feature selection
+- **Namespace Support**: Enhanced namespace detection with fallback to basic isolation
+- **Cross-Platform Paths**: Updated file paths and commands for universal compatibility
+- **Error Recovery**: Improved error handling and user guidance
+
+### 📋 Compatibility
+- **Backward Compatible**: All existing profiles continue to work without changes
+- **Universal Support**: Works on macOS (Intel/Apple Silicon), Linux (all distributions), and other Unix systems
+- **VS Code Types**: Supports all VS Code installation methods (Snap, Standard, Homebrew, App Bundle)
+
 ## [2.0.0] - 2024-06-23
 
 ### 🚀 Major Release - Complete Rewrite

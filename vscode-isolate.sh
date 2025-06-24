@@ -1,11 +1,67 @@
 #!/bin/bash
 
-# Enhanced VS Code Isolation Script
-# Creates completely sandboxed VS Code environments using Linux namespaces
-# Author: Enhanced for maximum isolation
-# Version: 2.0
+# Enhanced VS Code Isolation Script - Cross-Platform Edition
+# Creates completely sandboxed VS Code environments with universal compatibility
+# Author: Enhanced for cross-platform compatibility and maximum isolation
+# Version: 3.1.0
+# Platform: Universal (macOS, Linux, Unix)
+# Release: Cross-Platform Compatibility Release
 
 set -euo pipefail
+
+# Handle global commands first (before any processing)
+case "${1:-}" in
+    "--version"|"-v")
+        echo "VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release"
+        echo "Platform: Universal (macOS, Linux, Unix)"
+        echo "Author: Enhanced for cross-platform compatibility"
+        echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
+        echo
+        echo "Current Platform: $(uname)"
+        exit 0
+        ;;
+    "--help"|"-h"|"help")
+        cat << EOF
+VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release
+
+Usage: $0 <profile_name> [command] [options]
+
+Commands:
+    create      Create and launch isolated VS Code profile (default)
+    launch      Launch existing profile
+    remove      Remove profile completely
+    list        List all profiles
+    status      Show profile status
+    --version   Show version information
+    --help      Show this help message
+
+Examples:
+    $0 myproject                    # Create and launch 'myproject' profile
+    $0 myproject launch            # Launch existing 'myproject' profile
+    $0 myproject launch "vscode://file/path/to/file.js"  # Launch with VS Code URI
+    $0 myproject remove            # Remove 'myproject' profile
+    $0 "" list                     # List all profiles
+
+URI Support:
+    $0 myproject launch "vscode://file/path/to/file.js"     # Open specific file
+    $0 myproject launch "vscode://extension/ms-python.python"  # Install extension
+    $0 myproject launch --open-url "vscode://folder/path"   # Open folder
+
+Platform Support:
+    ✅ macOS (App Bundle, Homebrew)    - Basic isolation
+    ✅ Linux (Standard)                - Maximum security with namespaces
+    ✅ Linux (Snap)                    - Basic isolation (--force-namespaces for max)
+    ✅ Other Unix                      - Basic isolation
+
+Environment Variables:
+    VSCODE_ISOLATION_ROOT          # Root directory for isolated profiles (default: ~/.vscode-isolated)
+    VSCODE_BINARY                  # Path to VS Code binary (default: auto-detect)
+
+Repository: https://github.com/MamunHoque/VSCodeSandbox
+EOF
+        exit 0
+        ;;
+esac
 
 # Configuration
 ISOLATION_ROOT="${VSCODE_ISOLATION_ROOT:-$HOME/.vscode-isolated}"
@@ -25,10 +81,24 @@ log_success() { echo -e "${GREEN}✅${NC} $1"; }
 log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 log_error() { echo -e "${RED}❌${NC} $1"; }
 
+# Show version information
+show_version() {
+    echo "VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release"
+    echo "Platform: Universal (macOS, Linux, Unix)"
+    echo "Author: Enhanced for cross-platform compatibility"
+    echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
+    echo
+    echo "Current Platform: $(uname)"
+    echo "VS Code Binary: ${VSCODE_BINARY:-Not detected}"
+    echo "Isolation Root: $ISOLATION_ROOT"
+}
+
 # Usage function
 usage() {
     cat << EOF
-Usage: $0 <profile_name> [command]
+VS Code Sandbox v3.1.0 - Cross-Platform Compatibility Release
+
+Usage: $0 <profile_name> [command] [options]
 
 Commands:
     create      Create and launch isolated VS Code profile (default)
@@ -36,18 +106,36 @@ Commands:
     remove      Remove profile completely
     list        List all profiles
     status      Show profile status
+    --version   Show version information
+    --help      Show this help message
 
 Examples:
     $0 myproject                    # Create and launch 'myproject' profile
     $0 myproject launch            # Launch existing 'myproject' profile
+    $0 myproject launch "vscode://file/path/to/file.js"  # Launch with VS Code URI
     $0 myproject remove            # Remove 'myproject' profile
     $0 "" list                     # List all profiles
+
+URI Support:
+    $0 myproject launch "vscode://file/path/to/file.js"     # Open specific file
+    $0 myproject launch "vscode://extension/ms-python.python"  # Install extension
+    $0 myproject launch --open-url "vscode://folder/path"   # Open folder
+
+Platform Support:
+    ✅ macOS (App Bundle, Homebrew)    - Basic isolation
+    ✅ Linux (Standard)                - Maximum security with namespaces
+    ✅ Linux (Snap)                    - Basic isolation (--force-namespaces for max)
+    ✅ Other Unix                      - Basic isolation
 
 Environment Variables:
     VSCODE_ISOLATION_ROOT          # Root directory for isolated profiles (default: ~/.vscode-isolated)
     VSCODE_BINARY                  # Path to VS Code binary (default: auto-detect)
+
+Repository: https://github.com/MamunHoque/VSCodeSandbox
 EOF
 }
+
+# Global commands are handled above, continue with normal processing
 
 # Validate input
 if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" ]]; then
@@ -56,15 +144,41 @@ if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" ]]; then
     exit 1
 fi
 
-# Detect VS Code binary
+# Detect VS Code binary with cross-platform support
 detect_vscode_binary() {
-    local candidates=(
-        "/snap/bin/code"
-        "/usr/bin/code"
-        "/usr/local/bin/code"
-        "/opt/visual-studio-code/bin/code"
-        "$(which code 2>/dev/null || true)"
-    )
+    local candidates=()
+
+    # Detect platform and set appropriate candidates
+    case "$(uname)" in
+        "Darwin")
+            # macOS candidates
+            candidates=(
+                "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+                "$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+                "/usr/local/bin/code"
+                "/opt/homebrew/bin/code"
+                "$(which code 2>/dev/null || true)"
+            )
+            ;;
+        "Linux")
+            # Linux candidates
+            candidates=(
+                "/snap/bin/code"
+                "/usr/bin/code"
+                "/usr/local/bin/code"
+                "/opt/visual-studio-code/bin/code"
+                "$(which code 2>/dev/null || true)"
+            )
+            ;;
+        *)
+            # Generic Unix candidates
+            candidates=(
+                "/usr/local/bin/code"
+                "/usr/bin/code"
+                "$(which code 2>/dev/null || true)"
+            )
+            ;;
+    esac
 
     for candidate in "${candidates[@]}"; do
         if [[ -x "$candidate" ]]; then
@@ -74,12 +188,21 @@ detect_vscode_binary() {
     done
 
     log_error "VS Code binary not found. Please install VS Code or set VSCODE_BINARY environment variable."
+    case "$(uname)" in
+        "Darwin")
+            log_info "Download VS Code from: https://code.visualstudio.com/download"
+            log_info "Or install via Homebrew: brew install --cask visual-studio-code"
+            ;;
+        "Linux")
+            log_info "Install via package manager or download from: https://code.visualstudio.com/download"
+            ;;
+    esac
     exit 1
 }
 
 VSCODE_BINARY="${VSCODE_BINARY:-$(detect_vscode_binary)}"
 
-# Profile paths
+# Profile paths - set up for both namespace and basic isolation
 PROFILE_ROOT="$ISOLATION_ROOT/profiles/$PROFILE_NAME"
 PROFILE_HOME="$PROFILE_ROOT/home"
 PROFILE_CONFIG="$PROFILE_HOME/.config"
@@ -91,37 +214,73 @@ LAUNCHER_SCRIPT="$ISOLATION_ROOT/launchers/$PROFILE_NAME-launcher.sh"
 DESKTOP_ENTRY="$PROFILE_LOCAL/share/applications/code-$PROFILE_NAME.desktop"
 NAMESPACE_SCRIPT="$ISOLATION_ROOT/launchers/$PROFILE_NAME-namespace.sh"
 
-# Check if running with sufficient privileges for namespaces
-check_namespace_support() {
-    if ! unshare --help >/dev/null 2>&1; then
-        log_error "unshare command not available. Please install util-linux package."
-        exit 1
-    fi
+# Basic isolation paths (for cross-platform compatibility)
+PROFILE_CONFIG_BASIC="$PROFILE_ROOT/config"
+PROFILE_EXTENSIONS="$PROFILE_ROOT/extensions"
 
-    # Test if we can create user namespaces
-    if ! unshare -U true 2>/dev/null; then
-        log_warning "User namespaces not available. Some isolation features will be limited."
-        log_warning "Consider running: echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone"
-    fi
+# Check platform and namespace support
+check_platform_and_namespace_support() {
+    local platform="$(uname)"
+
+    case "$platform" in
+        "Darwin")
+            log_info "macOS detected - namespace isolation not available"
+            log_info "Using basic isolation mode (environment and directory separation)"
+            return 1  # Namespaces not supported
+            ;;
+        "Linux")
+            if ! command -v unshare >/dev/null 2>&1; then
+                log_warning "unshare command not available. Please install util-linux package."
+                log_info "Falling back to basic isolation mode"
+                return 1
+            fi
+
+            # Test if we can create user namespaces
+            if ! unshare -U true 2>/dev/null; then
+                log_warning "User namespaces not available. Some isolation features will be limited."
+                log_warning "Consider running: echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone"
+                log_info "Falling back to basic isolation mode"
+                return 1
+            fi
+
+            log_success "Linux with namespace support detected"
+            return 0  # Namespaces supported
+            ;;
+        *)
+            log_warning "Unknown platform: $platform"
+            log_info "Using basic isolation mode"
+            return 1
+            ;;
+    esac
+}
+
+# Legacy function for backward compatibility
+check_namespace_support() {
+    check_platform_and_namespace_support
 }
 
 # Create isolated directory structure
 create_profile_structure() {
     log_info "Creating isolated directory structure for profile '$PROFILE_NAME'"
 
-    # Create all necessary directories
-    mkdir -p "$PROFILE_HOME"/{.config,.cache,.local/{share/{applications,mime},bin},.vscode}
-    mkdir -p "$PROFILE_TMP"
-    mkdir -p "$PROFILE_PROJECTS"
+    # Create basic directories (always needed)
+    mkdir -p "$PROFILE_ROOT"/{config,extensions,projects}
     mkdir -p "$ISOLATION_ROOT/launchers"
 
-    # Create isolated XDG directories
-    mkdir -p "$PROFILE_CONFIG"/{Code,fontconfig,gtk-3.0,dconf}
-    mkdir -p "$PROFILE_CACHE"/{Code,fontconfig}
-    mkdir -p "$PROFILE_LOCAL/share"/{Code,applications,mime,fonts,themes,icons}
+    # Create namespace isolation directories (Linux only)
+    if [[ "$(uname)" == "Linux" ]]; then
+        mkdir -p "$PROFILE_HOME"/{.config,.cache,.local/{share/{applications,mime},bin},.vscode}
+        mkdir -p "$PROFILE_TMP"
 
-    # Create minimal environment files
-    cat > "$PROFILE_HOME/.profile" << 'EOF'
+        # Create isolated XDG directories
+        mkdir -p "$PROFILE_CONFIG"/{Code,fontconfig,gtk-3.0,dconf}
+        mkdir -p "$PROFILE_CACHE"/{Code,fontconfig}
+        mkdir -p "$PROFILE_LOCAL/share"/{Code,applications,mime,fonts,themes,icons}
+    fi
+
+    # Create minimal environment files (Linux namespace mode only)
+    if [[ "$(uname)" == "Linux" && -d "$PROFILE_HOME" ]]; then
+        cat > "$PROFILE_HOME/.profile" << 'EOF'
 # Isolated VS Code Profile Environment
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="$HOME/.cache"
@@ -132,8 +291,8 @@ mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 EOF
 
-    # Create isolated fontconfig
-    cat > "$PROFILE_CONFIG/fontconfig/fonts.conf" << 'EOF'
+        # Create isolated fontconfig
+        cat > "$PROFILE_CONFIG/fontconfig/fonts.conf" << 'EOF'
 <?xml version="1.0"?>
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
 <fontconfig>
@@ -142,6 +301,41 @@ EOF
     <dir>~/.local/share/fonts</dir>
     <cachedir>~/.cache/fontconfig</cachedir>
 </fontconfig>
+EOF
+    fi
+
+    # Create welcome file for the projects directory
+    cat > "$PROFILE_PROJECTS/README.md" << EOF
+# Welcome to $PROFILE_NAME Profile!
+
+This is your isolated VS Code environment. Everything here is completely separated from other profiles and your main VS Code installation.
+
+## What's Isolated:
+- ✅ Extensions (installed separately for this profile)
+- ✅ Settings and preferences
+- ✅ Workspace configurations
+- ✅ Recently opened files
+
+## Profile Information:
+- **Profile Name**: $PROFILE_NAME
+- **Platform**: $(uname)
+- **Profile Root**: $PROFILE_ROOT
+- **Projects Directory**: $PROFILE_PROJECTS
+- **Created**: $(date)
+
+## Useful Commands:
+\`\`\`bash
+# Launch this profile
+$0 $PROFILE_NAME launch
+
+# Remove this profile
+$0 $PROFILE_NAME remove
+
+# List all profiles
+$0 "" list
+\`\`\`
+
+Happy coding! 🚀
 EOF
 
     log_success "Directory structure created"
@@ -214,8 +408,117 @@ EOF
     chmod +x "$NAMESPACE_SCRIPT"
     log_success "Namespace script created"
 }
-# Create launcher script with enhanced isolation
-create_launcher_script() {
+# Create basic launcher script (cross-platform compatible)
+create_basic_launcher_script() {
+    log_info "Creating basic launcher script (cross-platform compatible)"
+
+    cat > "$LAUNCHER_SCRIPT" << EOF
+#!/bin/bash
+# Basic VS Code Launcher for isolated profile: $PROFILE_NAME
+# Cross-platform compatible (works on Linux, macOS, etc.)
+
+set -euo pipefail
+
+PROFILE_NAME="$PROFILE_NAME"
+PROFILE_ROOT="$PROFILE_ROOT"
+PROFILE_CONFIG="$PROFILE_CONFIG_BASIC"
+PROFILE_EXTENSIONS="$PROFILE_EXTENSIONS"
+PROFILE_PROJECTS="$PROFILE_PROJECTS"
+VSCODE_BINARY="$VSCODE_BINARY"
+
+# Check if profile exists
+if [[ ! -d "\$PROFILE_ROOT" ]]; then
+    echo "❌ Profile '\$PROFILE_NAME' does not exist"
+    echo "💡 Create it first with: \$0 \$PROFILE_NAME create"
+    exit 1
+fi
+
+# Parse arguments and handle various URI formats
+URI=""
+OPEN_FOLDER=""
+OPEN_FILE=""
+EXTRA_ARGS=()
+
+# Enhanced argument processing
+for arg in "\$@"; do
+    case "\$arg" in
+        vscode://*)
+            URI="\$arg"
+            ;;
+        --open-url=*)
+            URI="\${arg#--open-url=}"
+            ;;
+        --folder-uri=*)
+            OPEN_FOLDER="\${arg#--folder-uri=}"
+            ;;
+        --file-uri=*)
+            OPEN_FILE="\${arg#--file-uri=}"
+            ;;
+        file://*)
+            # Handle file:// URIs by converting to local path
+            local file_path="\${arg#file://}"
+            if [[ -e "\$file_path" ]]; then
+                if [[ -d "\$file_path" ]]; then
+                    OPEN_FOLDER="\$file_path"
+                else
+                    OPEN_FILE="\$file_path"
+                fi
+            fi
+            ;;
+        *)
+            # Check if it's a file or directory path
+            if [[ -e "\$arg" && "\$arg" != --* ]]; then
+                if [[ -d "\$arg" ]]; then
+                    OPEN_FOLDER="\$arg"
+                else
+                    OPEN_FILE="\$arg"
+                fi
+            else
+                EXTRA_ARGS+=("\$arg")
+            fi
+            ;;
+    esac
+done
+
+# Build final arguments
+FINAL_ARGS=(
+    --user-data-dir="\$PROFILE_CONFIG"
+    --extensions-dir="\$PROFILE_EXTENSIONS"
+    --disable-gpu-sandbox
+    --no-sandbox
+)
+
+# Add URI if specified
+if [[ -n "\$URI" ]]; then
+    FINAL_ARGS+=(--open-url "\$URI")
+fi
+
+# Add folder if specified (default to projects directory if none specified)
+if [[ -n "\$OPEN_FOLDER" ]]; then
+    FINAL_ARGS+=("\$OPEN_FOLDER")
+elif [[ \${#EXTRA_ARGS[@]} -eq 0 && -z "\$URI" && -z "\$OPEN_FILE" ]]; then
+    # No specific target, open projects directory
+    FINAL_ARGS+=("\$PROFILE_PROJECTS")
+fi
+
+# Add file if specified
+if [[ -n "\$OPEN_FILE" ]]; then
+    FINAL_ARGS+=(--goto "\$OPEN_FILE")
+fi
+
+# Add extra arguments
+FINAL_ARGS+=("\${EXTRA_ARGS[@]}")
+
+# Launch VS Code with isolated profile
+exec "\$VSCODE_BINARY" "\${FINAL_ARGS[@]}"
+EOF
+
+    chmod +x "$LAUNCHER_SCRIPT"
+    log_success "Basic launcher script created (cross-platform compatible)"
+}
+
+# Create launcher script with enhanced isolation (Linux namespaces)
+create_launcher_script_with_namespaces() {
     log_info "Creating launcher script with namespace isolation"
 
     cat > "$LAUNCHER_SCRIPT" << EOF
@@ -330,36 +633,81 @@ EOF
 install_extensions() {
     log_info "Installing extensions in isolated environment"
 
-    # Create a temporary script to install extensions
-    local install_script="$PROFILE_TMP/install-extensions.sh"
-    cat > "$install_script" << EOF
-#!/bin/bash
-export HOME="$PROFILE_HOME"
-export XDG_CONFIG_HOME="$PROFILE_HOME/.config"
-export XDG_DATA_HOME="$PROFILE_HOME/.local/share"
+    # Determine the correct directories based on isolation mode
+    local user_data_dir
+    local extensions_dir
 
-# Install Augment extension
-"$VSCODE_BINARY" \\
-    --user-data-dir="\$XDG_CONFIG_HOME/Code" \\
-    --extensions-dir="\$XDG_DATA_HOME/Code/extensions" \\
-    --install-extension augment.vscode-augment \\
-    --force
-EOF
-
-    chmod +x "$install_script"
-
-    # Run installation in isolated environment
-    if unshare --mount --uts --ipc --pid --fork "$install_script" 2>/dev/null; then
-        log_success "Augment extension installed"
+    if [[ "$(uname)" == "Linux" && -d "$PROFILE_HOME" ]]; then
+        # Namespace isolation mode (Linux)
+        user_data_dir="$PROFILE_CONFIG/Code"
+        extensions_dir="$PROFILE_LOCAL/share/Code/extensions"
+        mkdir -p "$user_data_dir" "$extensions_dir"
     else
-        log_warning "Failed to install Augment extension automatically"
-        log_info "You can install it manually after launching VS Code"
+        # Basic isolation mode (cross-platform)
+        user_data_dir="$PROFILE_CONFIG_BASIC"
+        extensions_dir="$PROFILE_EXTENSIONS"
+        mkdir -p "$user_data_dir" "$extensions_dir"
     fi
 
-    rm -f "$install_script"
+    # Try to install Augment extension directly
+    log_info "Attempting to install Augment extension..."
+
+    # Try different possible Augment extension IDs
+    local augment_extensions=(
+        "augment.vscode-augment"
+        "augmentcode.augment"
+        "augment.augment"
+        "augment-code.augment"
+    )
+
+    local augment_installed=false
+    for ext_id in "${augment_extensions[@]}"; do
+        if "$VSCODE_BINARY" \
+            --user-data-dir="$user_data_dir" \
+            --extensions-dir="$extensions_dir" \
+            --install-extension "$ext_id" \
+            --force \
+            --disable-gpu-sandbox \
+            --no-sandbox \
+            >/dev/null 2>&1; then
+            log_success "Augment extension installed successfully ($ext_id)"
+            augment_installed=true
+            break
+        fi
+    done
+
+    if [[ "$augment_installed" != true ]]; then
+        log_warning "Augment extension not found in marketplace with standard IDs"
+        log_info "You can install Augment manually from the Extensions marketplace"
+    fi
+
+    # Also try to install some commonly useful extensions
+    local common_extensions=(
+        "editorconfig.editorconfig"
+        "ms-vscode.vscode-typescript-next"
+        "bradlc.vscode-tailwindcss"
+    )
+
+    log_info "Installing common development extensions..."
+    for extension in "${common_extensions[@]}"; do
+        if "$VSCODE_BINARY" \
+            --user-data-dir="$user_data_dir" \
+            --extensions-dir="$extensions_dir" \
+            --install-extension "$extension" \
+            --force \
+            --disable-gpu-sandbox \
+            --no-sandbox \
+            >/dev/null 2>&1; then
+            log_info "✅ Installed: $extension"
+        else
+            log_info "⚠️ Skipped: $extension (not available or failed)"
+        fi
+    done
+
+    log_success "Extension installation completed"
 }
 
-# Create profile function
+# Create profile function with cross-platform support
 create_profile() {
     if [[ -d "$PROFILE_ROOT" ]]; then
         log_warning "Profile '$PROFILE_NAME' already exists"
@@ -375,11 +723,26 @@ create_profile() {
 
     log_info "Creating isolated VS Code profile: $PROFILE_NAME"
 
-    check_namespace_support
+    # Check platform and namespace support
+    local use_namespaces=false
+    if check_platform_and_namespace_support; then
+        use_namespaces=true
+        log_info "Using maximum security isolation with Linux namespaces"
+    else
+        log_info "Using basic isolation mode (cross-platform compatible)"
+    fi
+
     create_profile_structure
-    create_namespace_script
-    create_launcher_script
-    create_desktop_integration
+
+    if [[ "$use_namespaces" == true ]]; then
+        create_namespace_script
+        create_launcher_script_with_namespaces
+        create_desktop_integration
+    else
+        create_basic_launcher_script
+        # Skip desktop integration for basic mode to maintain compatibility
+    fi
+
     install_extensions
 
     log_success "Profile '$PROFILE_NAME' created successfully!"
@@ -389,11 +752,16 @@ create_profile() {
     "$LAUNCHER_SCRIPT" "$PROFILE_PROJECTS" >/dev/null 2>&1 &
 
     echo
-    log_success "🚀 VS Code '$PROFILE_NAME' is running in complete isolation!"
+    if [[ "$use_namespaces" == true ]]; then
+        log_success "�️ VS Code '$PROFILE_NAME' is running with maximum security isolation!"
+        echo -e "${BLUE}🔒${NC} Security Level: Maximum (Linux Namespaces)"
+    else
+        log_success "🚀 VS Code '$PROFILE_NAME' is running with basic isolation!"
+        echo -e "${BLUE}🔒${NC} Security Level: Basic (Cross-Platform Compatible)"
+    fi
     echo -e "${BLUE}📁${NC} Projects directory: $PROFILE_PROJECTS"
     echo -e "${BLUE}🔧${NC} Launcher script: $LAUNCHER_SCRIPT"
-    echo -e "${BLUE}🖥️${NC} Desktop entry: VS Code - $PROFILE_NAME (Isolated)"
-    echo -e "${BLUE}🔗${NC} URI scheme: vscode-$PROFILE_NAME://"
+    echo -e "${BLUE}🖥️${NC} Platform: $(uname)"
     echo
     echo -e "${GREEN}💡 Tips:${NC}"
     echo "   • Each profile is completely isolated from others and the host system"
@@ -480,7 +848,7 @@ list_profiles() {
         return
     fi
 
-    local profiles=($(find "$profiles_dir" -maxdepth 1 -type d -not -path "$profiles_dir" -printf "%f\n" 2>/dev/null | sort))
+    local profiles=($(find "$profiles_dir" -maxdepth 1 -type d -not -path "$profiles_dir" -exec basename {} \; 2>/dev/null | sort))
 
     if [[ ${#profiles[@]} -eq 0 ]]; then
         log_info "No isolated VS Code profiles found"
@@ -551,8 +919,10 @@ show_status() {
     if [[ -n "$pids" ]]; then
         echo -e "  ${GREEN}🟢 Running Processes:${NC}"
         echo "$pids" | while read -r pid; do
-            local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "Unknown")
-            echo -e "    PID $pid: $cmd"
+            if [[ -n "$pid" ]]; then
+                local cmd=$(ps -p "$pid" -o command= 2>/dev/null || echo "Unknown process")
+                echo -e "    PID $pid: $cmd"
+            fi
         done
     else
         echo -e "  ${YELLOW}⚪ No running processes${NC}"
