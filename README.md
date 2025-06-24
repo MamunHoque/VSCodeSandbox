@@ -1,122 +1,163 @@
 # VSCodeSandbox
 
-🚀 **Complete VS Code isolation solution with enterprise-grade security and AI integration**
+🚀 **Universal VS Code isolation solution with cross-platform compatibility**
 
-VS Code Sandbox creates completely isolated VS Code environments that simulate fresh OS installations with zero shared state between profiles. Features automatic Augment extension installation, project scaffolding, and enterprise-grade security using Linux namespaces.
+VS Code Sandbox creates completely isolated VS Code environments that work seamlessly across macOS, Linux, and all VS Code installation types. Features intelligent platform detection, automatic Augment extension installation, and adaptive security levels from basic isolation to enterprise-grade security using Linux namespaces.
 
 ## 🌟 **Key Features**
 
-- 🛡️ **Dual Security Levels**: Basic isolation or maximum security with Linux namespaces
+- 🌐 **Universal Compatibility**: Works on macOS, Linux, and all VS Code installation types
+- 🛡️ **Intelligent Security**: Automatic platform detection with adaptive isolation levels
+- 🔗 **Enhanced URI Support**: Full VS Code URL handling including Augment authentication
 - 🤖 **Automatic Augment Extension**: AI-powered development assistance in every profile
-- 📦 **Project Scaffolding**: Create React, Node.js, Python, Go, and static projects
-- 🌐 **Global Installation**: Install once, use anywhere with self-update capability
 - 🔒 **Complete Isolation**: Zero interference between profiles or host system
-- 🖥️ **Desktop Integration**: Custom launchers and MIME types for maximum security
-- 🧪 **Well Tested**: Comprehensive test suite ensures isolation effectiveness
-- 🧹 **Bulk Management**: Clean all profiles, fix namespace issues with single commands
-- 📱 **Snap Compatibility**: Works with snap VS Code (with options for complete isolation)
-- 🔧 **Auto-Repair**: Fix namespace permission issues automatically
-- 🚀 **Force Options**: Override snap restrictions for complete isolation when needed
+- 📦 **Cross-Platform Commands**: Unified interface across different operating systems
+- 🧪 **Well Tested**: Comprehensive validation ensures compatibility across platforms
+- 🚀 **Simple Installation**: Single script works everywhere - just clone and run
+- 📱 **All VS Code Types**: Snap, Standard, Homebrew, App Bundle - all supported
+- 🔧 **Graceful Fallback**: Automatically adapts when advanced features aren't available
+- 🎯 **Backward Compatible**: Existing profiles continue to work without changes
 
-## 🚀 **Quick Installation**
+## ⚡ **Quick Start**
 
-### **Linux (Recommended: Unified Tool)**
 ```bash
-curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/install-vscode-sandbox.sh | sudo bash
+# 1. Clone and run (works everywhere!)
+git clone https://github.com/MamunHoque/VSCodeSandbox.git
+cd VSCodeSandbox
+chmod +x vscode-isolate.sh
+
+# 2. Create your first isolated profile
+./vscode-isolate.sh myproject create
+
+# 3. That's it! VS Code opens with complete isolation
+# - Separate extensions, settings, and workspace
+# - Augment extension pre-installed
+# - Full VS Code URI support
+# - Works on macOS, Linux, and all VS Code types
 ```
 
-### **macOS (Apple Silicon M4 Optimized)**
+## 🚀 **Installation Options**
+
+### **Universal Installation (Recommended)**
+Works on macOS, Linux, and all VS Code installation types:
+
 ```bash
+# Clone and run - that's it!
+git clone https://github.com/MamunHoque/VSCodeSandbox.git
+cd VSCodeSandbox
+chmod +x vscode-isolate.sh
+
+# Create your first isolated profile
+./vscode-isolate.sh myproject create
+```
+
+### **One-Line Installation**
+```bash
+# Download and run directly
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh
+chmod +x vscode-isolate.sh
+./vscode-isolate.sh myproject create
+```
+
+### **Platform-Specific Tools (Optional)**
+For advanced features, you can also use platform-specific tools:
+
+```bash
+# Linux: Advanced namespace isolation
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/install-vscode-sandbox.sh | sudo bash
+
+# macOS: Native app bundle integration
 curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-sandbox-macos -o vscode-sandbox-macos
 chmod +x vscode-sandbox-macos
 sudo ./vscode-sandbox-macos --install
 ```
 
-### **Manual Installation**
-```bash
-git clone https://github.com/MamunHoque/VSCodeSandbox.git
-cd VSCodeSandbox
-chmod +x *.sh
-
-# For Linux
-sudo ./install-vscode-sandbox.sh
-
-# For macOS
-sudo ./vscode-sandbox-macos --install
-```
-
 ## 🖥️ **Platform Support**
 
-| Platform | Script | Features | Optimization |
-|----------|--------|----------|--------------|
-| **Linux** | `vscode-sandbox` | Full isolation with namespaces | Universal compatibility |
-| **macOS** | `vscode-sandbox-macos` | Native app bundles + URI handling | Apple Silicon M4 optimized |
+| Platform | VS Code Type | Isolation Level | Status |
+|----------|-------------|----------------|---------|
+| **macOS** | App Bundle | Basic | ✅ Fully Supported |
+| **macOS** | Homebrew | Basic | ✅ Fully Supported |
+| **Linux** | Standard | Maximum Security | ✅ Fully Supported |
+| **Linux** | Snap | Basic* | ✅ Fully Supported |
+| **Other Unix** | Any | Basic | ✅ Compatible |
+
+*Can be forced to Maximum Security with `--force-namespaces`
+
+### **Automatic Platform Detection**
+The enhanced `vscode-isolate.sh` script automatically:
+- 🔍 **Detects your platform** (macOS, Linux, Unix)
+- 🔍 **Finds VS Code installation** (App Bundle, Homebrew, Snap, Standard)
+- 🛡️ **Chooses optimal isolation level** (Basic or Maximum Security)
+- 💬 **Provides clear feedback** about what isolation level you're getting
 
 ### **Platform-Specific Documentation**
-- **Linux**: This README (full feature documentation)
-- **macOS**: [README-macOS.md](README-macOS.md) (macOS-specific features and setup)
+- **Universal**: This README (works everywhere)
+- **Linux Advanced**: [vscode-sandbox](vscode-sandbox) (namespace isolation)
+- **macOS Advanced**: [vscode-sandbox-macos](vscode-sandbox-macos) (native integration)
 
 ## 📋 **Usage**
 
-### **Linux Commands**
+### **Universal Commands (Works Everywhere)**
 ```bash
-# Create isolated profile (basic security)
-vscode-sandbox myproject create
+# Create isolated profile (automatic platform detection)
+./vscode-isolate.sh myproject create
 
-# Create maximum security profile
+# Launch isolated VS Code
+./vscode-isolate.sh myproject launch
+
+# Launch with VS Code URI support
+./vscode-isolate.sh myproject launch "vscode://file/path/to/file.js"
+./vscode-isolate.sh myproject launch "vscode://extension/ms-python.python"
+
+# List all profiles
+./vscode-isolate.sh "" list
+
+# Check profile status
+./vscode-isolate.sh myproject status
+
+# Remove profile
+./vscode-isolate.sh myproject remove
+
+# Show version and help
+./vscode-isolate.sh --version
+./vscode-isolate.sh --help
+```
+
+### **Platform-Specific Advanced Commands**
+```bash
+# Linux: Maximum security with namespaces (when available)
 vscode-sandbox secure-project create --max-security --desktop
 
-# Create project within isolated profile
-vscode-sandbox myproject scaffold my-app --type react --git --vscode
-
-# Launch isolated VS Code
-vscode-sandbox myproject launch
-
-# List all profiles
-vscode-sandbox list
-
-# Update tool
-vscode-sandbox --update
-```
-
-### **macOS Commands**
-```bash
-# Create isolated profile with native macOS integration
+# macOS: Native app bundle integration
 vscode-sandbox-macos myproject create
 
-# Create project within isolated profile
-vscode-sandbox-macos myproject scaffold my-app --type react --git --vscode
-
-# Launch isolated VS Code
-vscode-sandbox-macos myproject launch
-
-# Check URI handler status
-vscode-sandbox-macos myproject uri-status
-
-# List all profiles
-vscode-sandbox-macos list
-
-# Update tool
-vscode-sandbox-macos --update
+# Force namespace isolation (Linux with Snap VS Code)
+./vscode-isolate.sh myproject create --force-namespaces
 ```
 
-## 🛡️ **Security Levels**
+## 🛡️ **Isolation Levels**
 
-### **Basic Isolation (Default)**
+### **Basic Isolation (Universal - Default)**
 ```bash
-vscode-sandbox myproject create
+./vscode-isolate.sh myproject create
 ```
+**Works on**: macOS, Linux, all VS Code installation types
+
 - ✅ **Extensions isolated** - Separate extension directories
 - ✅ **Settings isolated** - Separate configuration files
 - ✅ **Workspace isolated** - Separate workspace state
+- ✅ **Environment isolated** - Separate configuration and cache directories
 - ✅ **Augment extension** - Pre-installed AI assistance
-- ✅ **Project scaffolding** - Integrated project creation
-- ✅ **Universal compatibility** - Works on any Linux system
+- ✅ **URI support** - Full VS Code URL handling
+- ✅ **Cross-platform** - Works everywhere VS Code works
 
-### **Maximum Security Isolation**
+### **Maximum Security Isolation (Linux Only)**
 ```bash
-vscode-sandbox secure-project create --max-security --desktop
+./vscode-isolate.sh secure-project create  # Auto-detected on Linux
 ```
+**Works on**: Linux with standard VS Code installation
+
 - ✅ **All basic features** PLUS:
 - 🛡️ **Process isolation** - Separate PID namespace (can't see host processes)
 - 🏠 **Environment isolation** - Separate HOME and XDG directories
@@ -124,11 +165,46 @@ vscode-sandbox secure-project create --max-security --desktop
 - 💬 **IPC isolation** - Separate inter-process communication
 - 🌐 **UTS isolation** - Separate hostname and domain name
 - 📁 **Temporary file isolation** - Separate /tmp directory
-- 🖥️ **Desktop integration** - Custom MIME types and launchers
+
+### **Automatic Selection**
+The script automatically chooses the best isolation level:
+- **macOS**: Always uses Basic isolation (namespaces not available)
+- **Linux + Standard VS Code**: Uses Maximum Security isolation
+- **Linux + Snap VS Code**: Uses Basic isolation (can be forced to Maximum)
+- **Other platforms**: Uses Basic isolation
 
 ### **When to Use Each**
-- **Basic**: Daily development, project separation, team environments
+- **Basic**: Daily development, project separation, cross-platform compatibility
 - **Maximum Security**: Enterprise environments, confidential projects, compliance requirements
+
+## 🆕 **What's New in v3.1.0**
+
+### **🌐 Cross-Platform Compatibility**
+- ✅ **Universal Support**: Single script works on macOS, Linux, and all Unix systems
+- ✅ **Automatic Detection**: Finds VS Code regardless of installation method
+- ✅ **Intelligent Adaptation**: Chooses optimal isolation level for your platform
+- ✅ **Enhanced URI Handling**: Full support for VS Code URLs including Augment authentication
+
+### **🔗 Enhanced VS Code URI Support**
+```bash
+# Open specific file in isolated profile
+./vscode-isolate.sh myproject launch "vscode://file/path/to/file.js"
+
+# Install extension via URI
+./vscode-isolate.sh myproject launch "vscode://extension/ms-python.python"
+
+# Handle Augment authentication
+./vscode-isolate.sh myproject launch "vscode://augment.vscode-augment/auth/result?code=..."
+
+# Open folder
+./vscode-isolate.sh myproject launch "vscode://folder/path/to/project"
+```
+
+### **🛡️ Improved Compatibility**
+- ✅ **All VS Code Types**: App Bundle, Homebrew, Snap, Standard installations
+- ✅ **Graceful Fallback**: Works even when advanced features aren't available
+- ✅ **Better Error Messages**: Clear guidance for platform-specific issues
+- ✅ **Backward Compatible**: Existing profiles continue to work
 
 ## 🤖 **Automatic Augment Extension**
 
@@ -145,12 +221,6 @@ Every isolated VS Code profile automatically includes:
 - **AI-Friendly Settings**: Optimized for Augment extension usage
 - **Development Features**: Smart commit, auto-fetch, parameter hints enabled
 - **Privacy Settings**: Telemetry disabled for security
-
-### **Skip Auto-Installation**
-```bash
-# Create profile without automatic extensions
-vscode-sandbox manual-setup create --no-extensions
-```
 
 ## 🛡️ **Maximum Security & Snap VS Code Compatibility**
 
@@ -231,12 +301,17 @@ Each project type includes:
 - ✅ **Git integration** (repository initialization and .gitignore)
 - ✅ **VS Code configuration** (settings, extensions, debug configuration)
 
-## 🔧 **Installation & System Requirements**
+## 🔧 **System Requirements**
 
-### **System Requirements**
-- **Linux Operating System** (Ubuntu 18.04+, Debian 10+, CentOS 8+, etc.)
-- **VS Code installed** (any method: snap, deb, AppImage, etc.)
-- **For Maximum Security**: util-linux package (provides `unshare` command)
+### **Universal Requirements**
+- **Operating System**: macOS, Linux, or any Unix-like system
+- **VS Code installed**: Any installation method (App Bundle, Homebrew, Snap, Standard, etc.)
+- **Git**: For cloning the repository (usually pre-installed)
+
+### **Platform-Specific Requirements**
+- **macOS**: No additional requirements - works out of the box
+- **Linux (Basic Isolation)**: No additional requirements
+- **Linux (Maximum Security)**: util-linux package (provides `unshare` command)
 
 ### **Enable User Namespaces (if needed for maximum security)**
 ```bash
@@ -413,54 +488,68 @@ vscode-sandbox uninstall
 
 ### **Common Issues**
 
-#### **User Namespaces Not Available**
+#### **VS Code Not Detected**
 ```bash
-# Error: "Operation not permitted" when creating maximum security profiles
-# Solution: Enable user namespaces
-echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone
+# Error: "VS Code binary not found"
+# Solution: The script provides platform-specific guidance
 
-# Check kernel support (requires 3.8+)
-uname -r
-```
+# macOS: Install VS Code
+brew install --cask visual-studio-code
+# Or download from: https://code.visualstudio.com/download
 
-#### **VS Code Won't Launch**
-```bash
-# Error: VS Code fails to start in isolated environment
-# Solution: Check VS Code binary detection
-which code
+# Linux: Install VS Code
+sudo apt install code
+# Or download from: https://code.visualstudio.com/download
 
 # Set custom binary path if needed
-export VSCODE_BINARY=/snap/bin/code
-vscode-sandbox myproject create
+export VSCODE_BINARY=/path/to/your/code
+./vscode-isolate.sh myproject create
+```
+
+#### **Platform Detection Issues**
+```bash
+# Check what platform and VS Code the script detects
+./vscode-isolate.sh --version
+
+# This shows:
+# - Current Platform: Darwin/Linux/etc.
+# - VS Code Binary: path or "Not detected"
+# - Isolation Root: where profiles are stored
 ```
 
 #### **Extension Installation Fails**
 ```bash
 # If Augment extension fails to install automatically
-# Solution: Install manually or skip auto-installation
-vscode-sandbox myproject create --no-extensions
-# Then install Augment manually from Extensions marketplace
+# The script will show a warning and continue
+# You can install Augment manually from Extensions marketplace
 ```
 
-#### **Namespace Permission Issues**
+#### **Linux Namespace Issues (Maximum Security)**
 ```bash
 # Error: "unshare: unshare failed: Operation not permitted"
-# Solution: Use the fix command
-vscode-sandbox fix-namespaces
+# Solution: Enable user namespaces (Linux only)
+echo 1 | sudo tee /proc/sys/kernel/unprivileged_userns_clone
 
-# Or force namespaces for snap VS Code (advanced)
-vscode-sandbox myproject launch --force-namespaces
+# Check kernel support (requires 3.8+)
+uname -r
+
+# The script automatically falls back to basic isolation if namespaces aren't available
 ```
 
 #### **Snap VS Code Compatibility**
 ```bash
-# Warning: "Snap VS Code detected - using basic isolation"
-# Solution 1: Install non-snap VS Code (recommended)
+# Info: "Snap VS Code detected - using basic isolation instead of namespaces"
+# This is normal and expected behavior
+
+# Solution 1: Use basic isolation (recommended, works great)
+./vscode-isolate.sh myproject create
+
+# Solution 2: Install non-snap VS Code for maximum security
 sudo snap remove code
 sudo apt install code
 
-# Solution 2: Force namespaces (may have issues)
-vscode-sandbox myproject create --max-security --force-namespaces
+# Solution 3: Force namespaces (advanced, may have issues)
+./vscode-isolate.sh myproject create --force-namespaces
 ```
 
 #### **Clean All Profiles**
