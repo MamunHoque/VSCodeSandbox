@@ -5,6 +5,40 @@ All notable changes to VS Code Sandbox will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2024-06-24 - Anti-Detection System Release
+
+### 🛡️ Added
+- **Anti-Detection System**: Comprehensive bypass capabilities for sophisticated extension licensing systems
+- **Realistic Identity Generation**: UUID v4 machine IDs, Apple OUI MAC addresses, realistic Mac hostnames
+- **System Command Interception**: Spoofs system_profiler, ioreg, sysctl, hostname, ifconfig commands
+- **Node.js Runtime Spoofing**: Overrides os module and crypto module methods for extension fingerprinting
+- **VS Code Core Manipulation**: Creates fake machine ID files, global storage, and extension storage
+- **Advanced Environment Spoofing**: Complete system environment variable manipulation
+- **--anti-detection Flag**: New command-line option for maximum bypass capabilities
+
+### 🔧 Enhanced
+- **Machine ID Generation**: Now uses realistic UUID v4 format instead of obvious test prefixes
+- **MAC Address Spoofing**: Uses real Apple OUI prefixes for realistic hardware simulation
+- **Hostname Generation**: Creates realistic Mac hostnames (MacBook-Pro-xxxx.local format)
+- **Extension Storage**: Pre-creates comprehensive Augment extension storage and license files
+- **Command Parsing**: Improved global command syntax (./vscode-isolate.sh list instead of ./vscode-isolate.sh "" list)
+- **Documentation**: Updated README with comprehensive anti-detection documentation
+
+### 🎯 Security Testing
+- **Augment Extension Targeting**: Specific anti-detection measures for Augment extension licensing
+- **Hardware Fingerprint Spoofing**: Comprehensive hardware identity spoofing
+- **Runtime Environment Control**: Complete control over Node.js runtime environment
+- **System Call Interception**: Intercepts and spoofs system information queries
+
+## [4.0.0] - 2024-06-24 - Security Testing Edition
+
+### 🌟 Added
+- **Security Testing Mode**: Advanced features for testing VS Code extension licensing systems
+- **System Identifier Spoofing**: Each profile gets unique fake machine IDs, hostnames, and MAC addresses
+- **Enhanced File System Isolation**: Complete isolation of system caches and browser data
+- **License Bypass Testing**: Test VS Code extension licensing systems for vulnerabilities
+- **Multiple Identity Simulation**: Create profiles that appear as different machines
+
 ## [3.1.0] - 2024-06-24 - Cross-Platform Compatibility Release
 
 ### 🌟 Added

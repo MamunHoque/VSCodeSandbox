@@ -24,6 +24,7 @@ That's it! VS Code opens with complete isolation, pre-installed Augment extensio
 - 🔒 **Complete Isolation**: Zero interference between profiles or host system
 - 📦 **Cross-Platform Commands**: Unified interface across different operating systems
 - 🧪 **Security Testing**: Advanced features for testing VS Code extension licensing systems
+- 🛡️ **Anti-Detection**: Comprehensive bypass system for sophisticated extension licensing
 - 🚀 **Simple Installation**: Single script works everywhere - just clone and run
 - 📱 **All VS Code Types**: Snap, Standard, Homebrew, App Bundle - all supported
 - 🔧 **Graceful Fallback**: Automatically adapts when advanced features aren't available
@@ -117,8 +118,10 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test-profile create
 
 ### **Advanced Commands**
 ```bash
-# Security testing mode
-./vscode-isolate.sh test-profile create --security-test
+# Security testing modes
+./vscode-isolate.sh test-profile create --security-test    # Basic security testing
+./vscode-isolate.sh bypass-test create --extreme-test      # Maximum spoofing
+./vscode-isolate.sh anti-detect create --anti-detection    # Advanced anti-detection
 
 # Force namespace isolation (Linux with Snap VS Code)
 ./vscode-isolate.sh myproject create --force-namespaces
@@ -177,7 +180,9 @@ The script automatically chooses the best isolation level:
 - ✅ **License Bypass Testing**: Test VS Code extension licensing systems for vulnerabilities
 - ✅ **Multiple Identity Simulation**: Create profiles that appear as different machines
 
-### **🧪 Security Testing Mode**
+### **🧪 Security Testing Modes**
+
+#### **Basic Security Testing**
 ```bash
 # Enable security testing mode (SIMPLE WAY)
 ./vscode-isolate.sh test1 create --security-test
@@ -193,6 +198,23 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test3 create
 # - Isolated system caches and browser data
 ```
 
+#### **🛡️ Anti-Detection Mode (Advanced)**
+```bash
+# Maximum anti-detection for extension license bypass
+./vscode-isolate.sh bypass-test create --anti-detection
+
+# Create multiple "different machines" for testing
+./vscode-isolate.sh machine-1 create --anti-detection
+./vscode-isolate.sh machine-2 create --anti-detection
+
+# Each profile gets realistic identifiers:
+# - Machine ID: 61c8dbad-1a9d-4602-aafd-ea2d057afb4b (UUID v4 format)
+# - Hostname: MacBook-Pro-1aff.local (realistic Mac hostname)
+# - MAC Address: 00:25:00:eb:8d:fc (real Apple OUI prefix)
+# - Complete system command interception
+# - Node.js runtime spoofing
+```
+
 ### **🌐 Cross-Platform Compatibility (Maintained)**
 - ✅ **Universal Support**: Single script works on macOS, Linux, and all Unix systems
 - ✅ **Automatic Detection**: Finds VS Code regardless of installation method
@@ -200,6 +222,8 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test3 create
 - ✅ **Enhanced URI Handling**: Full support for VS Code URLs including Augment authentication
 
 ### **🔧 Security Testing Use Cases**
+
+#### **Extension License Testing**
 ```bash
 # Test VS Code extension licensing systems (SIMPLE WAY)
 ./vscode-isolate.sh bypass-test-1 create --security-test
@@ -217,6 +241,30 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-3 create
 # Test if your extension can detect same physical hardware
 ./vscode-isolate.sh bypass-test-1 launch  # Appears as Machine A
 ./vscode-isolate.sh bypass-test-2 launch  # Appears as Machine B
+```
+
+#### **🛡️ Advanced Anti-Detection Testing**
+```bash
+# Maximum bypass capabilities for sophisticated extensions
+./vscode-isolate.sh augment-bypass-1 create --anti-detection
+./vscode-isolate.sh augment-bypass-2 create --anti-detection
+
+# Features include:
+# - Realistic UUID v4 machine IDs (matches VS Code format)
+# - Apple OUI MAC addresses (looks like real Apple hardware)
+# - System command interception (system_profiler, ioreg, sysctl)
+# - Node.js runtime spoofing (os module, crypto module)
+# - VS Code storage manipulation (machineid, globalStorage)
+# - Complete environment variable spoofing
+
+# Test trial reset scenarios
+./vscode-isolate.sh trial-reset-1 create --anti-detection
+./vscode-isolate.sh trial-reset-2 create --anti-detection
+
+# Test rapid profile creation (abuse detection)
+for i in {1..5}; do
+    ./vscode-isolate.sh "rapid-test-$i" create --anti-detection
+done
 ```
 
 ### **🔗 Enhanced VS Code URI Support**
@@ -242,50 +290,107 @@ VSCODE_SECURITY_TEST=true ./vscode-isolate.sh bypass-test-3 create
 
 ## 🔧 **Security Testing Features**
 
+### **🛡️ Anti-Detection System (NEW)**
+Advanced anti-detection capabilities specifically designed to bypass sophisticated extension licensing systems:
+
+#### **Comprehensive Identity Spoofing**
+- **Realistic Machine IDs**: UUID v4 format matching VS Code's internal format
+- **Apple Hardware Simulation**: Real Apple OUI MAC addresses and realistic hostnames
+- **Hardware Fingerprint Spoofing**: Serial numbers, board IDs, platform UUIDs
+- **System Command Interception**: Intercepts system_profiler, ioreg, sysctl calls
+
+#### **VS Code Core Manipulation**
+- **Machine ID Files**: Creates fake `/config/machineid` files
+- **Global Storage**: Pre-populates VS Code's internal storage with fake data
+- **Extension Storage**: Creates realistic extension storage for target extensions
+- **Telemetry Spoofing**: Disables telemetry and injects fake session data
+
+#### **Runtime Environment Spoofing**
+- **Node.js API Interception**: Overrides os.hostname(), os.userInfo(), os.networkInterfaces()
+- **Crypto Module Spoofing**: Prevents hardware fingerprinting via hash generation
+- **Environment Variables**: Complete system environment spoofing
+- **PATH Manipulation**: Intercepts system commands with fake implementations
+
 ### **VS Code Extension License Testing**
 Test your VS Code extension's licensing system for potential bypass vulnerabilities:
 
 ```bash
-# Create multiple security test profiles (SIMPLE WAY)
+# Basic security testing
 ./vscode-isolate.sh license-test-1 create --security-test
 ./vscode-isolate.sh license-test-2 create --security-test
-./vscode-isolate.sh license-test-3 create --security-test
+
+# Advanced anti-detection (recommended for sophisticated extensions)
+./vscode-isolate.sh augment-bypass-1 create --anti-detection
+./vscode-isolate.sh augment-bypass-2 create --anti-detection
 
 # Alternative: using environment variable
 VSCODE_SECURITY_TEST=true ./vscode-isolate.sh license-test-4 create
 
-# Each profile gets unique fake identifiers:
+# Basic mode gets test identifiers:
 # - Machine ID: security-test-abc123def456...
 # - Hostname: vscode-test-abc123de
 # - MAC Address: ab:cd:ef:12:34:56
-# - User/Session IDs: test-user-timestamp
+
+# Anti-detection mode gets realistic identifiers:
+# - Machine ID: 61c8dbad-1a9d-4602-aafd-ea2d057afb4b (UUID v4)
+# - Hostname: MacBook-Pro-1aff.local (realistic Mac)
+# - MAC Address: 00:25:00:eb:8d:fc (real Apple OUI)
 ```
 
 ### **What Gets Spoofed**
+
+#### **Basic Security Testing Mode**
 - **Hardware Identifiers**: Fake machine IDs, MAC addresses
 - **System Identifiers**: Hostnames, user IDs, session IDs
 - **File System**: Completely isolated system caches and browser data
 - **Environment Variables**: XDG directories, temporary paths
 - **Network Fingerprints**: Simulated network interface data
 
+#### **🛡️ Anti-Detection Mode (Advanced)**
+- **VS Code Core**: Machine ID files, global storage, telemetry settings
+- **System Commands**: system_profiler, ioreg, sysctl, hostname, ifconfig interception
+- **Node.js Runtime**: os module, crypto module method overrides
+- **Hardware Fingerprints**: Realistic UUID v4 IDs, Apple OUI MAC addresses
+- **Extension Storage**: Pre-created Augment extension storage and license files
+- **Environment**: Complete system environment variable spoofing
+- **Network**: Realistic network interface simulation with proper vendor prefixes
+
 ### **Testing Scenarios**
+
+#### **Basic License Testing**
 ```bash
 # Scenario 1: Test trial reset prevention
-# 1. Install your extension in normal VS Code
-# 2. Start trial period
-# 3. Create security test profile (SIMPLE WAY)
 ./vscode-isolate.sh trial-test create --security-test
-# 4. Check if trial resets in isolated environment
+# Install extension, start trial, check if trial resets
 
 # Scenario 2: Test multiple machine detection
-# 1. Create multiple profiles with different fake identifiers
-# 2. Test if your extension treats each as separate machines
-# 3. Verify server-side detection of same physical hardware
+./vscode-isolate.sh machine-a create --security-test
+./vscode-isolate.sh machine-b create --security-test
+# Test if extension treats each as separate machines
+```
 
-# Scenario 3: Test abuse detection
-# 1. Rapidly create multiple security test profiles
-# 2. Check if your licensing server detects suspicious patterns
-# 3. Verify rate limiting and abuse prevention
+#### **🛡️ Advanced Anti-Detection Testing**
+```bash
+# Scenario 1: Sophisticated extension bypass
+./vscode-isolate.sh augment-test-1 create --anti-detection
+./vscode-isolate.sh augment-test-2 create --anti-detection
+# Test against extensions with advanced fingerprinting
+
+# Scenario 2: Trial reset with realistic identities
+./vscode-isolate.sh realistic-trial-1 create --anti-detection
+./vscode-isolate.sh realistic-trial-2 create --anti-detection
+# Each appears as genuine different Mac hardware
+
+# Scenario 3: Rapid deployment testing
+for i in {1..10}; do
+    ./vscode-isolate.sh "deploy-test-$i" create --anti-detection &
+done
+wait
+# Test if licensing system detects rapid profile creation
+
+# Scenario 4: Long-term persistence testing
+./vscode-isolate.sh persistent-test create --anti-detection
+# Test license over time, check if detection improves
 ```
 
 ### **Setup Information Display**
