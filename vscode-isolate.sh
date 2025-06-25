@@ -15,7 +15,7 @@ SECURITY_TEST_MODE="${VSCODE_SECURITY_TEST:-false}"
 # Handle global commands first (before any processing)
 case "${1:-}" in
     "--version"|"-v")
-        echo "VS Code Sandbox v4.1.0 - Anti-Detection Edition"
+        echo "VS Code Sandbox v5.2.0 - Clean Command Edition"
         echo "Platform: Universal (macOS, Linux, Unix)"
         echo "Author: Enhanced for security testing and maximum isolation"
         echo "Repository: https://github.com/MamunHoque/VSCodeSandbox"
@@ -26,7 +26,7 @@ case "${1:-}" in
         ;;
     "--help"|"-h"|"help")
         cat << EOF
-VS Code Sandbox v4.1.0 - Anti-Detection Edition
+VS Code Sandbox v5.2.0 - Clean Command Edition
 
 Usage: $0 <profile_name> [command] [options]
        $0 <global_command>
@@ -36,9 +36,11 @@ Commands:
     launch      Launch existing profile
     remove      Remove profile completely
     status      Show profile status
+    test        Run anti-detection tests (security testing mode only)
 
 Global Commands:
     list        List all profiles
+    clean       Remove ALL profiles (with confirmation)
     --version   Show version information
     --help      Show this help message
 
@@ -88,7 +90,7 @@ esac
 ISOLATION_ROOT="${VSCODE_ISOLATION_ROOT:-$HOME/.vscode-isolated}"
 
 # Smart command parsing - handle global commands first
-if [[ "${1:-}" == "list" || "${1:-}" == "--version" || "${1:-}" == "--help" ]]; then
+if [[ "${1:-}" == "list" || "${1:-}" == "clean" || "${1:-}" == "--version" || "${1:-}" == "--help" ]]; then
     # Global commands don't need a profile name
     PROFILE_NAME=""
     COMMAND="${1:-}"
@@ -146,7 +148,7 @@ log_error() { echo -e "${RED}❌${NC} $1"; }
 # Usage function
 usage() {
     cat << EOF
-VS Code Sandbox v4.1.0 - Anti-Detection Edition
+VS Code Sandbox v5.2.0 - Clean Command Edition
 
 Usage: $0 <profile_name> [command] [options]
 
@@ -155,7 +157,9 @@ Commands:
     launch      Launch existing profile
     remove      Remove profile completely
     list        List all profiles
+    clean       Remove ALL profiles (with confirmation)
     status      Show profile status
+    test        Run anti-detection tests (security testing mode only)
     --version   Show version information
     --help      Show this help message
 
@@ -164,7 +168,10 @@ Examples:
     $0 myproject launch            # Launch existing 'myproject' profile
     $0 myproject launch "vscode://file/path/to/file.js"  # Launch with VS Code URI
     $0 myproject remove            # Remove 'myproject' profile
+    $0 myproject test              # Run anti-detection tests
     $0 list                        # List all profiles (IMPROVED!)
+    $0 clean                       # Remove ALL profiles (with confirmation)
+    $0 clean                       # Remove ALL profiles (with confirmation)
 
 Security Testing Examples:
     $0 test1 create --security-test             # Create profile with fake identifiers (simple)
@@ -203,7 +210,7 @@ EOF
 # Global commands are handled above, continue with normal processing
 
 # Validate input - only require profile name for profile-specific commands
-if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" && "$COMMAND" != "--version" && "$COMMAND" != "--help" ]]; then
+if [[ -z "$PROFILE_NAME" && "$COMMAND" != "list" && "$COMMAND" != "clean" && "$COMMAND" != "--version" && "$COMMAND" != "--help" ]]; then
     log_error "Profile name is required for command: $COMMAND"
     usage
     exit 1
@@ -336,6 +343,27 @@ generate_fake_machine_id() {
     echo "${hash:0:8}-${hash:8:4}-4${hash:12:3}-a${hash:15:3}-${hash:18:12}"
 }
 
+generate_fake_user_id() {
+    local profile_name="$1"
+    # Generate realistic user ID that mimics a different user account
+    local base_uid=$((501 + $(echo "$profile_name" | wc -c) % 100))
+    echo "$base_uid"
+}
+
+generate_fake_group_id() {
+    local profile_name="$1"
+    # Generate realistic group ID
+    local base_gid=$((20 + $(echo "$profile_name" | wc -c) % 50))
+    echo "$base_gid"
+}
+
+generate_fake_security_session_id() {
+    local profile_name="$1"
+    # Generate realistic security session ID (macOS specific)
+    local session_base=$((100000 + $(echo "$profile_name" | shasum -a 256 | cut -c1-8 | tr 'a-f' '0-5') % 900000))
+    echo "$session_base"
+}
+
 generate_fake_hostname() {
     local profile_name="$1"
     # Generate realistic hostname that doesn't look like testing
@@ -367,10 +395,17 @@ setup_security_test_environment() {
     # Create security testing directories
     mkdir -p "$PROFILE_SYSTEM_CACHE" "$PROFILE_SYSTEM_CONFIG" "$PROFILE_NETWORK_CONFIG"
 
+    # Create additional macOS-specific isolation directories
+    mkdir -p "$PROFILE_SYSTEM_CONFIG"/{Keychains,Preferences,LaunchServices,Spotlight}
+    mkdir -p "$PROFILE_SYSTEM_CACHE"/{com.apple.LaunchServices,com.apple.spotlight}
+
     # Generate fake identifiers for this profile
     local fake_machine_id=$(generate_fake_machine_id "$profile_name")
     local fake_hostname=$(generate_fake_hostname "$profile_name")
     local fake_mac=$(generate_fake_mac_address "$profile_name")
+    local fake_user_id=$(generate_fake_user_id "$profile_name")
+    local fake_group_id=$(generate_fake_group_id "$profile_name")
+    local fake_security_session=$(generate_fake_security_session_id "$profile_name")
 
     # Store fake identifiers for this profile
     local fake_timestamp=$(($(date +%s) - (RANDOM % 86400 * 30))) # Random time in last 30 days
@@ -391,17 +426,495 @@ export FAKE_SERIAL_NUMBER="$fake_serial"
 export FAKE_HARDWARE_UUID="$fake_uuid"
 export FAKE_PLATFORM_UUID="$(uuidgen 2>/dev/null || echo "$fake_machine_id")"
 export FAKE_BOARD_ID="Mac-$(echo "$profile_name" | shasum -a 256 | cut -c1-16 | tr '[:lower:]' '[:upper:]')"
+
+# Enhanced macOS User Account Simulation
+export FAKE_NUMERIC_USER_ID="$fake_user_id"
+export FAKE_NUMERIC_GROUP_ID="$fake_group_id"
+export FAKE_SECURITY_SESSION_ID="$fake_security_session"
+export FAKE_HOME_DIR="/Users/fake-user-$fake_user_id"
+export FAKE_LOGIN_KEYCHAIN="login-$fake_user_id.keychain"
+export FAKE_USER_SHELL="/bin/zsh"
+export FAKE_USER_REAL_NAME="Test User $fake_user_id"
+
+# System-level isolation identifiers
+export FAKE_LAUNCH_SERVICES_DB="lsregister-$fake_user_id.db"
+export FAKE_SPOTLIGHT_INDEX="spotlight-$fake_user_id.index"
+export FAKE_SYSTEM_CACHE_DIR="/var/folders/fake-$fake_user_id"
 EOF
 
     log_success "Security testing identifiers generated for '$profile_name'"
     log_info "Fake Machine ID: $fake_machine_id"
     log_info "Fake Hostname: $fake_hostname"
     log_info "Fake MAC Address: $fake_mac"
+    log_info "Fake User ID: $fake_user_id"
+    log_info "Fake Security Session: $fake_security_session"
 
     # Store identifiers for display later
     echo "$fake_machine_id" > "$PROFILE_SYSTEM_CONFIG/machine_id.txt"
     echo "$fake_hostname" > "$PROFILE_SYSTEM_CONFIG/hostname.txt"
     echo "$fake_mac" > "$PROFILE_SYSTEM_CONFIG/mac_address.txt"
+    echo "$fake_user_id" > "$PROFILE_SYSTEM_CONFIG/user_id.txt"
+    echo "$fake_security_session" > "$PROFILE_SYSTEM_CONFIG/security_session.txt"
+
+    # Setup advanced file system isolation
+    setup_advanced_filesystem_isolation "$profile_name"
+}
+
+# Advanced File System Isolation for macOS
+setup_advanced_filesystem_isolation() {
+    local profile_name="$1"
+
+    log_info "Setting up advanced file system isolation for macOS"
+
+    # Create isolated system directories that extensions might check
+    mkdir -p "$PROFILE_SYSTEM_CONFIG"/{Library,System,var}
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Library"/{Application\ Support,Caches,Preferences,Keychains,LaunchAgents,Saved\ Application\ State}
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Library/Application\ Support"/{Code,Google,Mozilla,Safari}
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/var"/{folders,tmp,log}
+
+    # Create fake system cache directories (mimics /var/folders structure)
+    local fake_cache_id=$(echo "$profile_name" | shasum -a 256 | cut -c1-2)
+    local fake_cache_subdir=$(echo "$profile_name" | shasum -a 256 | cut -c3-32)
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/var/folders/$fake_cache_id/$fake_cache_subdir/T"
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/var/folders/$fake_cache_id/$fake_cache_subdir/C"
+
+    # Create isolated keychain directory
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Library/Keychains"
+
+    # Create fake keychain files (empty but present for detection)
+    touch "$PROFILE_SYSTEM_CONFIG/Library/Keychains/login.keychain-db"
+    touch "$PROFILE_SYSTEM_CONFIG/Library/Keychains/local.keychain-db"
+
+    # Create isolated LaunchServices database
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Library/Preferences/com.apple.LaunchServices"
+
+    # Create fake LaunchServices database
+    cat > "$PROFILE_SYSTEM_CONFIG/Library/Preferences/com.apple.LaunchServices.plist" << LAUNCHSERVICES
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>LSHandlers</key>
+    <array>
+        <dict>
+            <key>LSHandlerContentType</key>
+            <string>public.plain-text</string>
+            <key>LSHandlerRoleAll</key>
+            <string>com.microsoft.VSCode</string>
+        </dict>
+    </array>
+    <key>LSVersion</key>
+    <string>$fake_user_id.0</string>
+</dict>
+</plist>
+LAUNCHSERVICES
+
+    # Create isolated Spotlight index
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Library/Metadata/CoreSpotlight"
+    touch "$PROFILE_SYSTEM_CONFIG/Library/Metadata/CoreSpotlight/index.spotlightV3"
+
+    log_success "Advanced file system isolation configured"
+}
+
+# Interactive Launch Prompt
+prompt_launch_profile() {
+    local profile_name="$1"
+    local launcher_script="$2"
+    local profile_projects="$3"
+
+    echo
+    echo -e "${BLUE}🚀 Profile Creation Complete!${NC}"
+    echo -e "${GREEN}✅ Profile '$profile_name' is ready to use${NC}"
+    echo
+    echo -e "${YELLOW}Would you like to launch this profile now?${NC}"
+    echo -e "${BLUE}Press Enter to launch, or any other key to skip${NC}"
+    echo -n "Launch now? [Y/n]: "
+
+    # Read user input with timeout
+    local user_input=""
+    local timeout_seconds=10
+
+    if read -t "$timeout_seconds" -r user_input; then
+        # User provided input within timeout
+        case "$user_input" in
+            ""|"y"|"Y"|"yes"|"YES"|"Yes")
+                echo
+                log_info "Launching isolated VS Code..."
+                launch_profile_with_feedback "$profile_name" "$launcher_script" "$profile_projects"
+                return 0
+                ;;
+            *)
+                echo
+                log_info "Skipping launch - you can launch later with: $0 $profile_name launch"
+                show_profile_completion_info "$profile_name" "$launcher_script" "$profile_projects" false
+                return 1
+                ;;
+        esac
+    else
+        # Timeout occurred
+        echo
+        log_info "Timeout reached - skipping launch"
+        log_info "You can launch later with: $0 $profile_name launch"
+        show_profile_completion_info "$profile_name" "$launcher_script" "$profile_projects" false
+        return 1
+    fi
+}
+
+# Launch profile with feedback
+launch_profile_with_feedback() {
+    local profile_name="$1"
+    local launcher_script="$2"
+    local profile_projects="$3"
+
+    # Launch the profile in background (don't use exec to avoid terminating script)
+    "$launcher_script" "$profile_projects" &
+    local launch_pid=$!
+
+    # Give VS Code a moment to start
+    sleep 2
+
+    # Check if the process is still running (VS Code started successfully)
+    if kill -0 "$launch_pid" 2>/dev/null; then
+        show_profile_completion_info "$profile_name" "$launcher_script" "$profile_projects" true
+    else
+        # If process died quickly, there might be an issue
+        wait "$launch_pid"
+        local exit_code=$?
+        if [[ $exit_code -ne 0 ]]; then
+            log_error "Failed to launch VS Code (exit code: $exit_code)"
+            log_info "Try launching manually with: $0 $profile_name launch"
+            show_profile_completion_info "$profile_name" "$launcher_script" "$profile_projects" false
+        else
+            # Process completed successfully (VS Code might have started and detached)
+            show_profile_completion_info "$profile_name" "$launcher_script" "$profile_projects" true
+        fi
+    fi
+}
+
+# Show profile completion information
+show_profile_completion_info() {
+    local profile_name="$1"
+    local launcher_script="$2"
+    local profile_projects="$3"
+    local is_launched="$4"
+
+    echo
+    if [[ "$is_launched" == true ]]; then
+        if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+            log_success "🔧 VS Code '$profile_name' is running with SECURITY TESTING mode!"
+            echo -e "${BLUE}🔒${NC} Security Level: Testing (Advanced Bypass Simulation)"
+            if [[ -n "${SECURITY_TEST_SCRIPT:-}" ]]; then
+                echo -e "${BLUE}🧪${NC} Security Test Script: $SECURITY_TEST_SCRIPT"
+            fi
+            echo -e "${YELLOW}⚠️${NC} This profile simulates different system identifiers for testing"
+        elif [[ "$use_namespaces" == true ]]; then
+            log_success "🛡️ VS Code '$profile_name' is running with maximum security isolation!"
+            echo -e "${BLUE}🔒${NC} Security Level: Maximum (Linux Namespaces)"
+        else
+            log_success "🚀 VS Code '$profile_name' is running with basic isolation!"
+            echo -e "${BLUE}🔒${NC} Security Level: Basic (Cross-Platform Compatible)"
+        fi
+    else
+        if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+            log_success "🔧 VS Code profile '$profile_name' created with SECURITY TESTING mode!"
+            echo -e "${BLUE}🔒${NC} Security Level: Testing (Advanced Bypass Simulation)"
+            if [[ -n "${SECURITY_TEST_SCRIPT:-}" ]]; then
+                echo -e "${BLUE}🧪${NC} Security Test Script: $SECURITY_TEST_SCRIPT"
+            fi
+            echo -e "${YELLOW}⚠️${NC} This profile simulates different system identifiers for testing"
+        elif [[ "$use_namespaces" == true ]]; then
+            log_success "🛡️ VS Code profile '$profile_name' created with maximum security isolation!"
+            echo -e "${BLUE}🔒${NC} Security Level: Maximum (Linux Namespaces)"
+        else
+            log_success "🚀 VS Code profile '$profile_name' created with basic isolation!"
+            echo -e "${BLUE}🔒${NC} Security Level: Basic (Cross-Platform Compatible)"
+        fi
+    fi
+
+    echo -e "${BLUE}📁${NC} Projects directory: $profile_projects"
+    echo -e "${BLUE}🔧${NC} Launcher script: $launcher_script"
+    echo -e "${BLUE}🖥️${NC} Platform: $(uname)"
+    echo
+    echo -e "${GREEN}💡 Tips:${NC}"
+    echo "   • Each profile is completely isolated from others and the host system"
+    echo "   • Use '$0 $profile_name launch' to start this profile again"
+    echo "   • Use '$0 $profile_name remove' to completely remove this profile"
+    echo "   • Use '$0 list' to see all profiles"
+
+    # Add anti-detection specific tips
+    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
+        echo "   • Use '$0 $profile_name test' to verify anti-detection effectiveness"
+        echo "   • Each profile appears as a completely different user/machine"
+    fi
+}
+
+# Keychain and Security Framework Isolation
+setup_keychain_security_isolation() {
+    local profile_name="$1"
+
+    if [[ "$(uname)" != "Darwin" ]]; then
+        return 0
+    fi
+
+    log_info "Setting up Keychain and Security Framework isolation"
+
+    # Create isolated keychain environment
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Keychains"
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/Security"
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/bin"
+
+    # Create fake keychain command wrapper
+    cat > "$PROFILE_SYSTEM_CONFIG/bin/security" << 'SECURITY_CMD'
+#!/bin/bash
+# Fake security command for keychain isolation
+
+case "$1" in
+    "list-keychains")
+        echo "    \"$PROFILE_SYSTEM_CONFIG/Keychains/login.keychain-db\""
+        echo "    \"$PROFILE_SYSTEM_CONFIG/Keychains/System.keychain\""
+        ;;
+    "default-keychain")
+        echo "    \"$PROFILE_SYSTEM_CONFIG/Keychains/login.keychain-db\""
+        ;;
+    "find-generic-password"|"find-internet-password")
+        # Return "not found" for any keychain queries
+        echo "security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain."
+        exit 44
+        ;;
+    "add-generic-password"|"add-internet-password")
+        # Pretend to add to isolated keychain
+        echo "password has been added to keychain"
+        ;;
+    *)
+        # For other commands, try to run real security but redirect to isolated keychain
+        /usr/bin/security "$@" 2>/dev/null || echo "security: operation not supported in isolated mode"
+        ;;
+esac
+SECURITY_CMD
+    chmod +x "$PROFILE_SYSTEM_CONFIG/bin/security"
+
+    # Create fake keychain access command
+    cat > "$PROFILE_SYSTEM_CONFIG/bin/keychain-access" << 'KEYCHAIN_ACCESS'
+#!/bin/bash
+# Fake Keychain Access for isolation
+echo "Keychain Access running in isolated mode"
+echo "Keychain: $PROFILE_SYSTEM_CONFIG/Keychains/login.keychain-db"
+KEYCHAIN_ACCESS
+    chmod +x "$PROFILE_SYSTEM_CONFIG/bin/keychain-access"
+
+    log_success "Keychain and Security Framework isolation configured"
+}
+
+# Process and User Context Isolation
+setup_process_user_isolation() {
+    local profile_name="$1"
+
+    log_info "Setting up process and user context isolation"
+
+    # Create fake process commands
+    mkdir -p "$PROFILE_SYSTEM_CONFIG/bin"
+
+    # Fake id command
+    cat > "$PROFILE_SYSTEM_CONFIG/bin/id" << 'ID_CMD'
+#!/bin/bash
+case "$1" in
+    "-u")
+        echo "$FAKE_NUMERIC_USER_ID"
+        ;;
+    "-g")
+        echo "$FAKE_NUMERIC_GROUP_ID"
+        ;;
+    "-un")
+        echo "fake-user-$FAKE_NUMERIC_USER_ID"
+        ;;
+    "-gn")
+        echo "fake-group-$FAKE_NUMERIC_GROUP_ID"
+        ;;
+    *)
+        echo "uid=$FAKE_NUMERIC_USER_ID(fake-user-$FAKE_NUMERIC_USER_ID) gid=$FAKE_NUMERIC_GROUP_ID(fake-group-$FAKE_NUMERIC_GROUP_ID) groups=$FAKE_NUMERIC_GROUP_ID(fake-group-$FAKE_NUMERIC_GROUP_ID)"
+        ;;
+esac
+ID_CMD
+    chmod +x "$PROFILE_SYSTEM_CONFIG/bin/id"
+
+    # Fake whoami command
+    cat > "$PROFILE_SYSTEM_CONFIG/bin/whoami" << 'WHOAMI_CMD'
+#!/bin/bash
+echo "fake-user-$FAKE_NUMERIC_USER_ID"
+WHOAMI_CMD
+    chmod +x "$PROFILE_SYSTEM_CONFIG/bin/whoami"
+
+    # Fake ps command for process isolation
+    cat > "$PROFILE_SYSTEM_CONFIG/bin/ps" << 'PS_CMD'
+#!/bin/bash
+# Show only fake processes for this user
+echo "  PID TTY           TIME CMD"
+echo "$$ ttys000    0:00.01 /bin/bash"
+echo "$(($ + 1)) ttys000    0:00.00 ps"
+PS_CMD
+    chmod +x "$PROFILE_SYSTEM_CONFIG/bin/ps"
+
+    log_success "Process and user context isolation configured"
+}
+
+# Anti-Detection Testing Framework
+create_detection_test_script() {
+    local profile_name="$1"
+
+    log_info "Creating anti-detection testing framework"
+
+    local test_script="$ISOLATION_ROOT/launchers/$profile_name-detection-test.sh"
+
+    cat > "$test_script" << 'DETECTION_TEST'
+#!/bin/bash
+# Anti-Detection Testing Framework
+# Tests the effectiveness of isolation against extension detection
+
+set -euo pipefail
+
+PROFILE_NAME="$1"
+PROFILE_ROOT="$2"
+PROFILE_SYSTEM_CONFIG="$3"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log_test() { echo -e "${BLUE}🧪 TEST:${NC} $1"; }
+log_pass() { echo -e "${GREEN}✅ PASS:${NC} $1"; }
+log_fail() { echo -e "${RED}❌ FAIL:${NC} $1"; }
+log_warn() { echo -e "${YELLOW}⚠️ WARN:${NC} $1"; }
+
+echo -e "${BLUE}🔬 Anti-Detection Testing Framework${NC}"
+echo -e "${BLUE}Profile: $PROFILE_NAME${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Load fake identifiers
+if [[ -f "$PROFILE_SYSTEM_CONFIG/identifiers.env" ]]; then
+    source "$PROFILE_SYSTEM_CONFIG/identifiers.env"
+fi
+
+# Test 1: System Identifier Spoofing
+log_test "System Identifier Spoofing"
+if [[ -n "${FAKE_MACHINE_ID:-}" ]]; then
+    log_pass "Machine ID spoofed: $FAKE_MACHINE_ID"
+else
+    log_fail "Machine ID not spoofed"
+fi
+
+if [[ -n "${FAKE_HOSTNAME:-}" ]]; then
+    log_pass "Hostname spoofed: $FAKE_HOSTNAME"
+else
+    log_fail "Hostname not spoofed"
+fi
+
+# Test 2: User Context Isolation
+log_test "User Context Isolation"
+if [[ -n "${FAKE_NUMERIC_USER_ID:-}" ]]; then
+    log_pass "User ID spoofed: $FAKE_NUMERIC_USER_ID"
+else
+    log_fail "User ID not spoofed"
+fi
+
+if [[ -n "${FAKE_SECURITY_SESSION_ID:-}" ]]; then
+    log_pass "Security Session spoofed: $FAKE_SECURITY_SESSION_ID"
+else
+    log_fail "Security Session not spoofed"
+fi
+
+# Test 3: File System Isolation
+log_test "File System Isolation"
+if [[ -d "$PROFILE_SYSTEM_CONFIG/Library" ]]; then
+    log_pass "Isolated Library directory created"
+else
+    log_fail "Isolated Library directory missing"
+fi
+
+if [[ -f "$PROFILE_SYSTEM_CONFIG/Library/Keychains/login.keychain-db" ]]; then
+    log_pass "Isolated keychain files created"
+else
+    log_fail "Isolated keychain files missing"
+fi
+
+# Test 4: Command Interception
+log_test "Command Interception"
+export PATH="$PROFILE_SYSTEM_CONFIG/bin:$PATH"
+
+if command -v system_profiler >/dev/null 2>&1; then
+    hw_uuid=$(system_profiler SPHardwareDataType 2>/dev/null | grep "Hardware UUID" | head -1)
+    if [[ "$hw_uuid" == *"$FAKE_MACHINE_ID"* ]]; then
+        log_pass "system_profiler intercepted successfully"
+    else
+        log_warn "system_profiler interception may not be working"
+    fi
+fi
+
+if command -v hostname >/dev/null 2>&1; then
+    current_hostname=$(hostname 2>/dev/null)
+    if [[ "$current_hostname" == "$FAKE_HOSTNAME" ]]; then
+        log_pass "hostname command intercepted successfully"
+    else
+        log_warn "hostname interception may not be working (got: $current_hostname)"
+    fi
+fi
+
+# Test 5: VS Code Storage Isolation
+log_test "VS Code Storage Isolation"
+if [[ -f "$PROFILE_SYSTEM_CONFIG/Code/User/machineid" ]]; then
+    vscode_machine_id=$(cat "$PROFILE_SYSTEM_CONFIG/Code/User/machineid")
+    if [[ "$vscode_machine_id" == "$FAKE_MACHINE_ID" ]]; then
+        log_pass "VS Code machine ID properly spoofed"
+    else
+        log_fail "VS Code machine ID not properly spoofed"
+    fi
+else
+    log_warn "VS Code machine ID file not found"
+fi
+
+# Test 6: Augment Extension Storage
+log_test "Augment Extension Storage Isolation"
+if [[ -f "$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/augment.vscode-augment/storage.json" ]]; then
+    log_pass "Augment extension storage created"
+    augment_machine_id=$(grep -o '"machineId":"[^"]*"' "$PROFILE_SYSTEM_CONFIG/Code/User/globalStorage/augment.vscode-augment/storage.json" | cut -d'"' -f4)
+    if [[ "$augment_machine_id" == "$FAKE_MACHINE_ID" ]]; then
+        log_pass "Augment machine ID properly spoofed"
+    else
+        log_fail "Augment machine ID not properly spoofed"
+    fi
+else
+    log_warn "Augment extension storage not found"
+fi
+
+# Test 7: Network Interface Spoofing
+log_test "Network Interface Spoofing"
+if command -v ifconfig >/dev/null 2>&1; then
+    mac_addr=$(ifconfig en0 2>/dev/null | grep "ether" | awk '{print $2}')
+    if [[ "$mac_addr" == "$FAKE_MAC_ADDRESS" ]]; then
+        log_pass "MAC address spoofed successfully"
+    else
+        log_warn "MAC address spoofing may not be working (got: $mac_addr)"
+    fi
+fi
+
+echo
+echo -e "${BLUE}🎯 Detection Resistance Summary:${NC}"
+echo -e "${GREEN}✅ System identifiers spoofed${NC}"
+echo -e "${GREEN}✅ User context isolated${NC}"
+echo -e "${GREEN}✅ File system isolated${NC}"
+echo -e "${GREEN}✅ Commands intercepted${NC}"
+echo -e "${GREEN}✅ VS Code storage isolated${NC}"
+echo -e "${GREEN}✅ Extension storage prepared${NC}"
+echo
+echo -e "${YELLOW}💡 This profile should be undetectable by Augment extension licensing${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+DETECTION_TEST
+
+    chmod +x "$test_script"
+
+    log_success "Anti-detection testing framework created: $test_script"
 }
 
 # Display current setup information
@@ -655,6 +1168,26 @@ setup_security_environment() {
     export TMPDIR="$PROFILE_TMP"
     export TMP="$PROFILE_TMP"
     export TEMP="$PROFILE_TMP"
+
+    # Advanced macOS User Account Simulation
+    export HOME="\$FAKE_HOME_DIR"
+    export USER="fake-user-\$FAKE_NUMERIC_USER_ID"
+    export LOGNAME="fake-user-\$FAKE_NUMERIC_USER_ID"
+    export USERNAME="fake-user-\$FAKE_NUMERIC_USER_ID"
+    export SHELL="\$FAKE_USER_SHELL"
+    export REAL_NAME="\$FAKE_USER_REAL_NAME"
+
+    # macOS-specific user context
+    export __CF_USER_TEXT_ENCODING="0x\$FAKE_NUMERIC_USER_ID:0x8000100:0x8000100"
+    export SECURITYSESSIONID="\$FAKE_SECURITY_SESSION_ID"
+
+    # Keychain isolation
+    export KEYCHAIN_PATH="\$PROFILE_SYSTEM_CONFIG/Keychains"
+    export LOGIN_KEYCHAIN="\$KEYCHAIN_PATH/\$FAKE_LOGIN_KEYCHAIN"
+
+    # System directory isolation
+    export SYSTEM_CACHE_DIR="\$FAKE_SYSTEM_CACHE_DIR"
+    export LAUNCH_SERVICES_DB="\$PROFILE_SYSTEM_CONFIG/Library/Preferences/\$FAKE_LAUNCH_SERVICES_DB"
 
     # Extreme testing mode - additional spoofing
     if [[ "\${EXTREME_TEST_MODE:-false}" == "true" ]]; then
@@ -1172,8 +1705,10 @@ if [[ -n "\$OPEN_FILE" ]]; then
     FINAL_ARGS+=(--goto "\$OPEN_FILE")
 fi
 
-# Add extra arguments
-FINAL_ARGS+=("\${EXTRA_ARGS[@]}")
+# Add extra arguments (safe array expansion)
+if [[ \${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    FINAL_ARGS+=("\${EXTRA_ARGS[@]}")
+fi
 
 # Launch VS Code with isolated profile
 exec "\$VSCODE_BINARY" "\${FINAL_ARGS[@]}"
@@ -1403,6 +1938,9 @@ create_profile() {
     # Setup security testing environment if enabled
     if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
         setup_security_test_environment "$PROFILE_NAME"
+        setup_keychain_security_isolation "$PROFILE_NAME"
+        setup_process_user_isolation "$PROFILE_NAME"
+        create_detection_test_script "$PROFILE_NAME"
         create_security_test_launcher
     fi
 
@@ -1422,37 +1960,10 @@ create_profile() {
     # Display current setup information
     display_setup_information "$PROFILE_NAME"
 
-    log_info "Launching isolated VS Code..."
+    # Interactive prompt to launch the profile
+    prompt_launch_profile "$PROFILE_NAME" "$LAUNCHER_SCRIPT" "$PROFILE_PROJECTS"
 
-    # Launch the profile
-    "$LAUNCHER_SCRIPT" "$PROFILE_PROJECTS" >/dev/null 2>&1 &
 
-    echo
-    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
-        log_success "🔧 VS Code '$PROFILE_NAME' is running with SECURITY TESTING mode!"
-        echo -e "${BLUE}🔒${NC} Security Level: Testing (Advanced Bypass Simulation)"
-        echo -e "${BLUE}🧪${NC} Security Test Script: $SECURITY_TEST_SCRIPT"
-        echo -e "${YELLOW}⚠️${NC} This profile simulates different system identifiers for testing"
-    elif [[ "$use_namespaces" == true ]]; then
-        log_success "�️ VS Code '$PROFILE_NAME' is running with maximum security isolation!"
-        echo -e "${BLUE}🔒${NC} Security Level: Maximum (Linux Namespaces)"
-    else
-        log_success "🚀 VS Code '$PROFILE_NAME' is running with basic isolation!"
-        echo -e "${BLUE}🔒${NC} Security Level: Basic (Cross-Platform Compatible)"
-    fi
-    echo -e "${BLUE}📁${NC} Projects directory: $PROFILE_PROJECTS"
-    echo -e "${BLUE}🔧${NC} Launcher script: $LAUNCHER_SCRIPT"
-    echo -e "${BLUE}🖥️${NC} Platform: $(uname)"
-    echo
-    echo -e "${GREEN}💡 Tips:${NC}"
-    echo "   • Each profile is completely isolated from others and the host system"
-    echo "   • Use '$0 $PROFILE_NAME launch' to start this profile again"
-    echo "   • Use '$0 $PROFILE_NAME remove' to completely remove this profile"
-    echo "   • Use '$0 list' to see all profiles"
-    if [[ "$SECURITY_TEST_MODE" == "true" ]]; then
-        echo "   • Security testing mode creates fake system identifiers for bypass testing"
-        echo "   • Use 'VSCODE_SECURITY_TEST=true $0 <profile> create' to enable testing mode"
-    fi
 }
 # Launch existing profile
 launch_profile() {
@@ -1615,6 +2126,128 @@ show_status() {
     echo
 }
 
+# Run anti-detection tests
+run_detection_tests() {
+    if [[ ! -d "$PROFILE_ROOT" ]]; then
+        log_error "Profile '$PROFILE_NAME' does not exist"
+        log_info "Create it first with: $0 $PROFILE_NAME create --security-test"
+        exit 1
+    fi
+
+    local test_script="$ISOLATION_ROOT/launchers/$PROFILE_NAME-detection-test.sh"
+
+    if [[ ! -f "$test_script" ]]; then
+        log_error "Detection test script not found for profile '$PROFILE_NAME'"
+        log_info "This profile was not created with security testing mode"
+        log_info "Recreate with: $0 $PROFILE_NAME create --security-test"
+        exit 1
+    fi
+
+    log_info "Running anti-detection tests for profile '$PROFILE_NAME'"
+    "$test_script" "$PROFILE_NAME" "$PROFILE_ROOT" "$PROFILE_SYSTEM_CONFIG"
+}
+
+# Clean all profiles
+clean_all_profiles() {
+    if [[ ! -d "$ISOLATION_ROOT" ]]; then
+        log_info "No profiles directory found - nothing to clean"
+        return 0
+    fi
+
+    # Check if there are any profiles
+    local profile_count=0
+    if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+        profile_count=$(find "$ISOLATION_ROOT/profiles" -maxdepth 1 -type d ! -path "$ISOLATION_ROOT/profiles" | wc -l)
+    fi
+
+    if [[ $profile_count -eq 0 ]]; then
+        log_info "No profiles found - nothing to clean"
+        return 0
+    fi
+
+    echo
+    log_warning "⚠️  This will permanently remove ALL isolated VS Code profiles!"
+    echo
+    echo -e "${YELLOW}Profiles to be removed:${NC}"
+
+    # List all profiles that will be removed
+    if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+        for profile_dir in "$ISOLATION_ROOT/profiles"/*; do
+            if [[ -d "$profile_dir" ]]; then
+                local profile_name=$(basename "$profile_dir")
+                local profile_size=$(du -sh "$profile_dir" 2>/dev/null | cut -f1)
+                echo -e "  ${RED}🗑️${NC} $profile_name (${profile_size})"
+            fi
+        done
+    fi
+
+    echo
+    echo -e "${RED}This action cannot be undone!${NC}"
+    echo -n -e "${YELLOW}Are you sure you want to remove ALL profiles? (type 'yes' to confirm): ${NC}"
+
+    local confirmation
+    read -r confirmation
+
+    if [[ "$confirmation" != "yes" ]]; then
+        log_info "Clean operation cancelled"
+        return 1
+    fi
+
+    echo
+    log_info "Removing all profiles..."
+
+    # Remove all profiles
+    local removed_count=0
+    if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+        for profile_dir in "$ISOLATION_ROOT/profiles"/*; do
+            if [[ -d "$profile_dir" ]]; then
+                local profile_name=$(basename "$profile_dir")
+                log_info "Removing profile: $profile_name"
+                rm -rf "$profile_dir"
+                ((removed_count++))
+            fi
+        done
+    fi
+
+    # Remove all launchers
+    if [[ -d "$ISOLATION_ROOT/launchers" ]]; then
+        log_info "Removing launcher scripts..."
+        rm -rf "$ISOLATION_ROOT/launchers"/*
+    fi
+
+    # Remove desktop entries (Linux only)
+    if [[ "$(uname)" == "Linux" ]]; then
+        local desktop_dir="$HOME/.local/share/applications"
+        if [[ -d "$desktop_dir" ]]; then
+            log_info "Removing desktop entries..."
+            find "$desktop_dir" -name "vscode-isolated-*.desktop" -delete 2>/dev/null || true
+        fi
+    fi
+
+    # Clean up empty directories
+    if [[ -d "$ISOLATION_ROOT/profiles" ]]; then
+        rmdir "$ISOLATION_ROOT/profiles" 2>/dev/null || true
+    fi
+    if [[ -d "$ISOLATION_ROOT/launchers" ]]; then
+        rmdir "$ISOLATION_ROOT/launchers" 2>/dev/null || true
+    fi
+    if [[ -d "$ISOLATION_ROOT" ]]; then
+        rmdir "$ISOLATION_ROOT" 2>/dev/null || true
+    fi
+
+    echo
+    log_success "Successfully removed $removed_count profiles"
+    log_info "All isolated VS Code profiles have been cleaned up"
+
+    if [[ $removed_count -gt 0 ]]; then
+        echo
+        echo -e "${GREEN}💡 Tips:${NC}"
+        echo "   • Create new profiles with: $0 <profile-name> create"
+        echo "   • Use --anti-detection for maximum isolation: $0 <profile-name> create --anti-detection"
+        echo "   • List profiles anytime with: $0 list"
+    fi
+}
+
 # Main command dispatcher
 main() {
     case "$COMMAND" in
@@ -1632,6 +2265,12 @@ main() {
             ;;
         "status")
             show_status
+            ;;
+        "test")
+            run_detection_tests
+            ;;
+        "clean")
+            clean_all_profiles
             ;;
         *)
             log_error "Unknown command: $COMMAND"

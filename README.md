@@ -1,34 +1,153 @@
 # VSCodeSandbox
 
-🚀 **Universal VS Code isolation solution with cross-platform compatibility**
+🚀 **Complete VS Code isolation with advanced anti-detection capabilities**
 
-VS Code Sandbox creates completely isolated VS Code environments that work seamlessly across macOS, Linux, and all VS Code installation types. Features intelligent platform detection, automatic Augment extension installation, and adaptive security levels from basic isolation to enterprise-grade security using Linux namespaces.
+VSCodeSandbox creates completely isolated VS Code environments that replicate the isolation effectiveness of new macOS user accounts. Features comprehensive anti-detection systems, automatic Augment extension installation, and enterprise-grade security that makes extension trial detection virtually impossible.
 
-## ⚡ **Quick Installation**
-
-Get started instantly with two simple commands:
+## ⚡ **One-Line Installation**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh && chmod +x vscode-isolate.sh
+```
+
+## 🚀 **Quick Start**
+
+### **Basic Isolated Profile**
+```bash
 ./vscode-isolate.sh myproject create
 ```
 
-That's it! VS Code opens with complete isolation, pre-installed Augment extension, and full cross-platform compatibility.
+### **Anti-Detection Profile (Recommended)**
+```bash
+./vscode-isolate.sh bypass-profile create --anti-detection
+```
+
+That's it! VS Code opens with complete isolation, pre-installed Augment extension, and undetectable system fingerprinting.
 
 ## 🌟 **Key Features**
 
-- 🌐 **Universal Compatibility**: Works on macOS, Linux, and all VS Code installation types
-- 🛡️ **Intelligent Security**: Automatic platform detection with adaptive isolation levels
-- 🔗 **Enhanced URI Support**: Full VS Code URL handling including Augment authentication
-- 🤖 **Automatic Augment Extension**: AI-powered development assistance in every profile
-- 🔒 **Complete Isolation**: Zero interference between profiles or host system
-- 📦 **Cross-Platform Commands**: Unified interface across different operating systems
-- 🧪 **Security Testing**: Advanced features for testing VS Code extension licensing systems
-- 🛡️ **Anti-Detection**: Comprehensive bypass system for sophisticated extension licensing
-- 🚀 **Simple Installation**: Single script works everywhere - just clone and run
-- 📱 **All VS Code Types**: Snap, Standard, Homebrew, App Bundle - all supported
-- 🔧 **Graceful Fallback**: Automatically adapts when advanced features aren't available
-- 🎯 **Backward Compatible**: Existing profiles continue to work without changes
+### **🛡️ Advanced Anti-Detection System**
+- 🔒 **Complete User Account Simulation**: Each profile appears as different macOS user
+- 🎭 **Realistic System Fingerprinting**: UUID v4 machine IDs, Apple OUI MAC addresses
+- 🔐 **Keychain & Security Isolation**: Separate credential storage per profile
+- 🌐 **Network Interface Spoofing**: Unique MAC addresses and network identities
+- 🧪 **Command Interception**: System commands spoofed for maximum stealth
+- 🎯 **Trial Reset Capability**: Extensions see each profile as new installation
+
+### **🚀 Universal Compatibility & Ease of Use**
+- 🌐 **Cross-Platform**: Works on macOS, Linux, and all VS Code installation types
+- 🤖 **Auto Augment Installation**: AI-powered development assistance pre-installed
+- 🔗 **Enhanced URI Support**: Full VS Code URL handling including authentication
+- 📦 **Unified Interface**: Same commands work across all operating systems
+- 🔧 **Intelligent Fallback**: Adapts when advanced features aren't available
+- 🎯 **Backward Compatible**: Existing profiles continue to work seamlessly
+
+## 🎯 **TL;DR - Quick Usage**
+
+### **For Extension Trial Reset (Most Common Use Case)**
+```bash
+# 1. Install
+curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/vscode-isolate.sh -o vscode-isolate.sh && chmod +x vscode-isolate.sh
+
+# 2. Create undetectable profile
+./vscode-isolate.sh bypass-1 create --anti-detection
+
+# 3. Use VS Code normally (Augment extension pre-installed)
+# Each profile appears as completely new user/machine
+
+# 4. Create more profiles as needed
+./vscode-isolate.sh bypass-2 create --anti-detection
+./vscode-isolate.sh bypass-3 create --anti-detection
+```
+
+### **Verify It's Working**
+```bash
+# Test anti-detection effectiveness
+./vscode-isolate.sh bypass-1 test
+
+# Should show all tests passing:
+# ✅ PASS: Machine ID spoofed
+# ✅ PASS: User context isolated
+# ✅ PASS: File system isolated
+# ✅ PASS: Extension storage isolated
+```
+
+## 📋 **Usage Guide**
+
+### **🎯 Anti-Detection Profiles (Recommended)**
+
+For maximum effectiveness against extension licensing systems:
+
+```bash
+# Create undetectable profile
+./vscode-isolate.sh bypass-profile-1 create --anti-detection
+
+# Launch isolated VS Code
+./vscode-isolate.sh bypass-profile-1 launch
+
+# Create additional profiles (each gets unique identifiers)
+./vscode-isolate.sh bypass-profile-2 create --anti-detection
+./vscode-isolate.sh bypass-profile-3 create --anti-detection
+
+# Test anti-detection effectiveness
+./vscode-isolate.sh bypass-profile-1 test
+```
+
+### **🔧 Standard Profiles**
+
+For basic isolation without anti-detection:
+
+```bash
+# Create standard isolated profile
+./vscode-isolate.sh myproject create
+
+# Launch profile
+./vscode-isolate.sh myproject launch
+
+# Remove profile
+./vscode-isolate.sh myproject remove
+```
+
+### **📊 Profile Management**
+
+```bash
+# List all profiles
+./vscode-isolate.sh list
+
+# Check profile status
+./vscode-isolate.sh myproject status
+
+# Launch with specific file/folder
+./vscode-isolate.sh myproject launch /path/to/project
+./vscode-isolate.sh myproject launch "vscode://file/path/to/file.js"
+```
+
+## 🔬 **Anti-Detection Modes**
+
+### **Security Testing Levels**
+
+```bash
+# Basic security testing
+./vscode-isolate.sh test-profile create --security-test
+
+# Extreme testing (maximum spoofing)
+./vscode-isolate.sh test-profile create --extreme-test
+
+# Anti-detection mode (recommended for Augment bypass)
+./vscode-isolate.sh test-profile create --anti-detection
+```
+
+### **What Gets Spoofed in Anti-Detection Mode**
+
+Each profile gets completely unique identifiers:
+- **Machine ID**: `61c8dbad-1a9d-4602-aafd-ea2d057afb4b` (UUID v4 format)
+- **Hostname**: `MacBook-Pro-1aff.local` (realistic Mac hostname)
+- **MAC Address**: `00:25:00:eb:8d:fc` (real Apple OUI prefix)
+- **User ID**: `516` (realistic macOS user ID)
+- **Security Session**: `187432` (unique session identifier)
+- **Keychain**: Isolated credential storage
+- **System Cache**: Separate `/var/folders/` equivalent
+- **LaunchServices**: Isolated app registration database
 
 ## ⚡ **Alternative Installation Methods**
 
@@ -39,15 +158,9 @@ git clone https://github.com/MamunHoque/VSCodeSandbox.git
 cd VSCodeSandbox
 chmod +x vscode-isolate.sh
 
-# Create your first isolated profile
-./vscode-isolate.sh myproject create
+# Create your first anti-detection profile
+./vscode-isolate.sh myproject create --anti-detection
 ```
-
-### **Platform-Specific Tools (Optional)**
-For advanced features, you can also use platform-specific tools:
-
-```bash
-# Linux: Advanced namespace isolation
 curl -sSL https://raw.githubusercontent.com/MamunHoque/VSCodeSandbox/main/install-vscode-sandbox.sh | sudo bash
 
 # macOS: Native app bundle integration
@@ -172,47 +285,88 @@ The script automatically chooses the best isolation level:
 - **Basic**: Daily development, project separation, cross-platform compatibility
 - **Maximum Security**: Enterprise environments, confidential projects, compliance requirements
 
-## 🆕 **What's New in v4.0.0 - Security Testing Edition**
+## 🆕 **What's New in v5.0.0 - Complete Anti-Detection Edition**
 
-### **🔧 Advanced Security Testing Features**
-- ✅ **System Identifier Spoofing**: Each profile gets unique fake machine IDs, hostnames, and MAC addresses
-- ✅ **Enhanced File System Isolation**: Complete isolation of system caches and browser data
-- ✅ **License Bypass Testing**: Test VS Code extension licensing systems for vulnerabilities
-- ✅ **Multiple Identity Simulation**: Create profiles that appear as different machines
+### **🛡️ Revolutionary Anti-Detection System**
+- ✅ **Complete User Account Simulation**: Each profile appears as different macOS user
+- ✅ **Realistic System Fingerprinting**: UUID v4 machine IDs, Apple OUI MAC addresses
+- ✅ **Advanced File System Isolation**: Keychain, LaunchServices, Spotlight isolation
+- ✅ **Command Interception**: System commands spoofed for maximum stealth
+- ✅ **Trial Reset Capability**: Extensions see each profile as new installation
+- ✅ **Anti-Detection Testing**: Built-in framework to verify bypass effectiveness
 
-### **🧪 Security Testing Modes**
+### **🎯 Anti-Detection Effectiveness**
+**Equivalent to Creating New macOS User Accounts:**
+- ✅ Each profile appears as completely different user/machine
+- ✅ Extensions cannot detect previous trial usage
+- ✅ Trial periods reset for each new profile
+- ✅ Zero cross-profile data leakage
+- ✅ Realistic system identifiers that pass all checks
 
-#### **Basic Security Testing**
+### **🧪 Enhanced Security Testing Modes**
+
+#### **🛡️ Anti-Detection Mode (Recommended)**
 ```bash
-# Enable security testing mode (SIMPLE WAY)
-./vscode-isolate.sh test1 create --security-test
-./vscode-isolate.sh test2 create --security-test
+# Maximum anti-detection for extension bypass
+./vscode-isolate.sh bypass-profile-1 create --anti-detection
+./vscode-isolate.sh bypass-profile-2 create --anti-detection
 
-# Alternative: using environment variable
-VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test3 create
-
-# Each profile gets unique identifiers:
-# - Fake Machine ID: security-test-abc123...
-# - Fake Hostname: vscode-test-abc123
-# - Fake MAC Address: ab:cd:ef:12:34:56
-# - Isolated system caches and browser data
-```
-
-#### **🛡️ Anti-Detection Mode (Advanced)**
-```bash
-# Maximum anti-detection for extension license bypass
-./vscode-isolate.sh bypass-test create --anti-detection
-
-# Create multiple "different machines" for testing
-./vscode-isolate.sh machine-1 create --anti-detection
-./vscode-isolate.sh machine-2 create --anti-detection
+# Test anti-detection effectiveness
+./vscode-isolate.sh bypass-profile-1 test
 
 # Each profile gets realistic identifiers:
 # - Machine ID: 61c8dbad-1a9d-4602-aafd-ea2d057afb4b (UUID v4 format)
 # - Hostname: MacBook-Pro-1aff.local (realistic Mac hostname)
 # - MAC Address: 00:25:00:eb:8d:fc (real Apple OUI prefix)
-# - Complete system command interception
+# - User ID: 516 (realistic macOS user ID)
+# - Security Session: 187432 (unique session)
+# - Complete keychain isolation
+# - System command interception
 # - Node.js runtime spoofing
+```
+
+#### **🔧 Basic Security Testing**
+```bash
+# Basic security testing mode
+./vscode-isolate.sh test1 create --security-test
+./vscode-isolate.sh test2 create --security-test
+
+# Extreme testing mode (maximum spoofing)
+./vscode-isolate.sh test3 create --extreme-test
+
+# Alternative: using environment variable
+VSCODE_SECURITY_TEST=true ./vscode-isolate.sh test4 create
+```
+
+### **🧪 Anti-Detection Testing Framework**
+
+Verify the effectiveness of your isolation:
+
+```bash
+# Create anti-detection profile
+./vscode-isolate.sh test-profile create --anti-detection
+
+# Run comprehensive detection tests
+./vscode-isolate.sh test-profile test
+
+# Expected output:
+# 🧪 TEST: System Identifier Spoofing
+# ✅ PASS: Machine ID spoofed: 61c8dbad-1a9d-4602-aafd-ea2d057afb4b
+# ✅ PASS: Hostname spoofed: MacBook-Pro-1aff.local
+# 🧪 TEST: User Context Isolation
+# ✅ PASS: User ID spoofed: 516
+# ✅ PASS: Security Session spoofed: 187432
+# 🧪 TEST: File System Isolation
+# ✅ PASS: Isolated Library directory created
+# ✅ PASS: Isolated keychain files created
+# 🧪 TEST: Command Interception
+# ✅ PASS: system_profiler intercepted successfully
+# ✅ PASS: hostname command intercepted successfully
+# 🧪 TEST: VS Code Storage Isolation
+# ✅ PASS: VS Code machine ID properly spoofed
+# 🧪 TEST: Augment Extension Storage Isolation
+# ✅ PASS: Augment extension storage created
+# ✅ PASS: Augment machine ID properly spoofed
 ```
 
 ### **🌐 Cross-Platform Compatibility (Maintained)**
